@@ -1,0 +1,37 @@
+{
+  "files": [
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.txt",
+    "THIRD_PARTY_DESKTOP_NOTICES.txt",
+    "docs/user/USER_GUIDE.md",
+    "docs/engineering/EVALUATION.md",
+    "docs/engineering/DESIGN.md",
+    "docs/engineering/ARCHITECTURE.md",
+    "docs/engineering/ARCHIVE_SCHEMA_V2.md",
+    "docs/engineering/PERFORMANCE_0.2.0.md",
+    "docs/engineering/PROXY_DIAGNOSTIC.md",
+    "docs/engineering/PROXY_SOURCES_REVIEW.md",
+    "docs/engineering/PROXY_GROUPS.md",
+    "docs/engineering/SUBSCRIPTION_SECURITY.md",
+    "docs/engineering/VALIDATION-2026-10-15.md",
+    "docs/research/live-activities-protocol.md",
+    "docs/research/licenses/douyinlive-proto-MIT.txt",
+    "docs/release/BUILD.md",
+    "docs/release/CDN_RELEASE.md",
+    "docs/engineering/SESSION_QUALITY_0.2.2.md",
+    "docs/engineering/MESSAGE_DELIVERY_0.2.3.md",
+    "docs/engineering/AUDIENCE_0.2.4.md",
+    "GLOSSARY.md",
+    "DISCLAIMER.md",
+    "SECURITY.md",
+    "docs/engineering/RUST_MIGRATION.md",
+    "docs/research/remastered-rust-migration-2026-10-16.md",
+    "licenses/upstream/DouyinLiveMonitor-MIT.txt",
+    "licenses/upstream/DouyinLiveMonitor-Remastered-MIT.txt"
+  ],
+  "directories": [
+    "release-notes"
+  ]
+}

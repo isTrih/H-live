@@ -1,0 +1,20 @@
+{
+  "name": "h-live",
+  "version": "0.2.4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
+    "build": "vite build",
+    "tauri": "tauri",
+    "desktop:build": "tauri build --no-bundle"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.3",
+    "@tauri-apps/plugin-updater": "2.13.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.2",
+    "vite": "8.3.4"
+  }
+}

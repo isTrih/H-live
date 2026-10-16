@@ -1,0 +1,8 @@
+tools/
+smoke-*.json
+install-test/
+install-test-data/
+install-test-v2/
+install-test-v2-data/
+*.log
+install-test-*-result.txt

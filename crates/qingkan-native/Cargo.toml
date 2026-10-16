@@ -1,0 +1,15 @@
+[package]
+name = "qingkan-native"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "In-process Python adapter for the Qingkan Rust core"
+
+[lib]
+name = "qingkan_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+qingkan-core = { path = "../qingkan-core" }
+pyo3.workspace = true
+serde_json.workspace = true

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "氢看直播",
+  "version": "0.2.4",
+  "mainBinaryName": "DouyinLiveMonitor",
+  "identifier": "com.douyinlivemonitor.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist-ui"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "氢看直播",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 1040,
+        "minHeight": 700,
+        "backgroundColor": "#00000000",
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data:; connect-src ipc: http://ipc.localhost; font-src 'self' data:; object-src 'none'; frame-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "createUpdaterArtifacts": true,
+    "useLocalToolsDir": true,
+    "publisher": "Qingkan Live",
+    "resources": {
+      "engine/": "engine/",
+      "bundle-docs/": "docs/",
+      "bundle-licenses/": "licenses/"
+    },
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "SimpChinese",
+          "English"
+        ],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "startMenuFolder": "氢看直播",
+        "installerHooks": "../packaging/nsis-hooks.nsh",
+        "compression": "lzma"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI3NTY1NjdDODNERTNDNTMKUldSVFBONkRmRlpXdDdNdWJjSmloMFdhMm1sU01UblF6MUFtNXhaazFNSE9YK3Y5VHNEZHJKOEsK",
+      "endpoints": [
+        "https://assets.checkpoint321.com/lilith/qingkan-live/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

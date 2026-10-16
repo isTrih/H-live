@@ -1,0 +1,11 @@
+-r requirements-build.txt
+# Historical protobuf model is used only by offline protocol fixtures/differential tests.
+betterproto==2.0.0b7
+grpclib==0.4.9
+python-dateutil==2.9.0.post0
+typing-extensions==4.16.0
+h2==4.4.1
+multidict==7.1.0
+six==1.17.0
+hyperframe==6.1.0
+hpack==4.2.0

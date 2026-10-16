@@ -1,0 +1,1 @@
+https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.11/nsis-3.11.zip (tool archive verified by Tauri bundler)

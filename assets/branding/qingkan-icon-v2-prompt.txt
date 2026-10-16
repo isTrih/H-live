@@ -1,0 +1,9 @@
+Mode: built-in image_gen tool; model selection is not exposed by this tool.
+Final asset: qingkan-app-icon-v2.png (transparent background)
+
+Use case: logo-brand.
+Asset type: final Windows desktop application icon for 氢看直播, a livestream chat monitoring app.
+Primary request: a genuinely adorable, lovable, polished kawaii mascot app icon, beautifully simple, very cute and appealing rather than corporate or abstract.
+Subject: one plump little mint-green television mascot with softly rounded chunky corners, a creamy-white screen as its face, two oversized dark forest-green round sparkling eyes, a tiny happy curved mouth and subtle peach blush cheeks. Two very short rounded antenna nubs and two tiny stubby feet make it sweet and characterful. The mascot itself is the entire icon.
+Style/medium: premium soft 3D clay/vinyl toy icon, satin matte material, gentle volume, superb crisp silhouette, restrained soft shading. Charming tasteful Japanese kawaii character design, calm and friendly.
+Composition: one centered front-facing nearly symmetrical mascot, fills about 86% of the square canvas, readable at 32px, large simple face. The TV screen and eyes have strong contrast. No scene, no text, no letters, no branding, no stand, no extra symbols, no icon grid. Keep transparent outside the mascot, no square background tile, no drop shadow outside its silhouette, no floor, no fake checkerboard. Make it delightful and instantly recognizable as a tiny friendly live-viewing companion.

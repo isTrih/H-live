@@ -1,0 +1,59 @@
+{
+  "checked_at": "2026-10-14",
+  "assets": [
+    {
+      "file": "src/fonts/DouyinSansBold.otf",
+      "archive": "抖音美好体_猫啃网.zip",
+      "member": "抖音美好体/DouyinSansBold.otf",
+      "size": 2082964,
+      "sha256": "64ca83ed532c6e64f0c1344de1def681540b21e92f8e5e52482bf1b3cf8ee060"
+    },
+    {
+      "file": "src/fonts/licenses/DouyinSans-original-notice.txt",
+      "archive": "抖音美好体_猫啃网.zip",
+      "member": "字体授权说明.txt",
+      "size": 264,
+      "sha256": "3c824e0c8b47590f6e7b1b7be39b96c6c1e728c553f87e18c0b4cf2ed8e0934f"
+    },
+    {
+      "file": "src/fonts/ChillRoundM.otf",
+      "archive": "ChillRoundM_v1.805.zip",
+      "member": "ChillRoundM_v1.805/ChillRoundM.otf",
+      "size": 4764200,
+      "sha256": "2c8da065414e3cab951744f15c25b17a9ab4ae93e48def22004bc917550d1219"
+    },
+    {
+      "file": "src/fonts/licenses/ChillRoundM-OFL.txt",
+      "archive": "ChillRoundM_v1.805.zip",
+      "member": "ChillRoundM_v1.805/LICENSE.txt",
+      "size": 4375,
+      "sha256": "d45891f8adfd21368c98e803603df1f575ff3fc4a6ec713ba7ccf0e3cba15b28"
+    },
+    {
+      "file": "src/fonts/licenses/DouyinSans-OFL.txt",
+      "source": "https://raw.githubusercontent.com/bytedance/fonts/main/DouyinSans/OFL.txt",
+      "size": 4455,
+      "sha256": "a6d5700a002ea32bcfbe3310253d603997683dac8ac63777e375d06c07c30ea6"
+    }
+  ],
+  "fonts": [
+    {
+      "file": "DouyinSansBold.otf",
+      "family": "Douyin Sans",
+      "chinese_name": "抖音美好体",
+      "weight": 700,
+      "style": "normal",
+      "format": "opentype",
+      "variable": false
+    },
+    {
+      "file": "ChillRoundM.otf",
+      "family": "ChillRoundM",
+      "chinese_name": "寒蝉半圆体",
+      "weight": 400,
+      "style": "normal",
+      "format": "opentype",
+      "variable": false
+    }
+  ]
+}

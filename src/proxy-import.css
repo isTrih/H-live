@@ -1,0 +1,24 @@
+.proxy-source-row, .proxy-import-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+.proxy-source-row label, .proxy-import-controls label { color: var(--muted); font-size: 13px; }
+.proxy-source-row select { min-width: 190px; }
+.proxy-source-row button { margin-left: auto; }
+.proxy-modal { width: min(720px, calc(100vw - 48px)); }
+.proxy-import-intro { color: var(--muted); margin-bottom: 18px; }
+.proxy-import-controls { gap: 10px; margin-bottom: 18px; }
+.proxy-import-controls label { margin-left: auto; }
+.proxy-import-controls select { width: auto; }
+#proxy-text { min-height: 150px; max-height: 230px; resize: vertical; font-family: inherit; }
+.proxy-import-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 12px; }
+.proxy-import-result span { color: var(--muted); font-size: 13px; }
+.proxy-import-table { max-height: 270px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.proxy-import-table thead { position: sticky; top: 0; background: var(--panel, #fff); z-index: 1; }
+.proxy-import-table td, .proxy-import-table th { white-space: nowrap; }
+.proxy-import-table .icon-btn { width: 30px; height: 30px; }
+.proxy-import-errors { margin: 12px 0 0; padding-left: 20px; color: #a63d3d; font-size: 13px; line-height: 1.7; }
+.proxy-section { margin-bottom: 20px; }
+.proxy-route-table, #proxy-leases > .table-wrap { max-height: 340px; overflow: auto; }
+.proxy-subscription-row { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--line); }
+.proxy-subscription-row > div { flex: 1; min-width: 0; }
+.proxy-subscription-row strong { display: block; overflow-wrap: anywhere; }
+.proxy-subscription-row small { display: block; color: var(--muted); margin-top: 6px; font-size: 12px; }
+.proxy-subscription-row small.danger { color: #a63d3d; }

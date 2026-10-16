@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.otf binary
+*.png binary
+*.ico binary
+*.bin binary
+# These exact upstream bytes are covered by font-manifest.json hashes.
+src/fonts/licenses/* -text -whitespace
+# Preserve the frozen reference adapters used by differential tests.
+legacy/python-reference/* -whitespace
+packaging/extra-licenses/** -whitespace

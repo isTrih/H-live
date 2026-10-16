@@ -1,0 +1,36 @@
+.modal.anchor-detail-dialog{width:min(1040px,calc(100vw - 64px));max-width:none;display:flex;flex-direction:column;overflow:hidden}
+.anchor-detail-dialog .modal-header{flex:0 0 auto}
+.anchor-detail-dialog .modal-body{min-height:0;overflow:auto}
+.session-quality{margin:16px 0;border-top:1px solid var(--line);padding-top:16px}
+.quality-heading,.quality-tools,.quality-evidence-heading,.quality-reason-bar,.quality-pages{display:flex;align-items:center;gap:10px}
+.quality-heading{justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.quality-heading h3{margin:0;font-size:15px;white-space:nowrap}.quality-heading h3 span{font-size:13px;color:var(--muted);margin-left:5px}
+.quality-tools{gap:6px;flex-wrap:wrap}.quality-tools input,.quality-tools select{height:32px;font-size:12px;padding:4px 7px;width:auto}
+.quality-table-wrap{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.quality-table{width:100%;table-layout:auto}.quality-table th{position:sticky;top:0;background:#f8f9f8;z-index:1;white-space:nowrap}
+.quality-table td{padding:9px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}.quality-table th{padding:10px;font-size:11px}
+.quality-table tr.current{background:#f1f8f2}.quality-table tr.selected{background:#e6f2e9}
+.quality-session-link{display:block;min-height:36px;padding:3px 7px;text-align:left;background:#fff;border:1px solid transparent;border-radius:6px;color:var(--ink);box-shadow:none;max-width:210px}
+.quality-session-link:hover{background:#f4f7f4;color:var(--ink)}.quality-session-link strong{display:block;font-size:12px}.quality-session-link small{display:block;font-size:10px;color:#728078;margin-top:3px}
+.quality-effective{color:#23613c;font-weight:700}.quality-state{font-size:11px;color:#68746b}.quality-state.analyzing,.quality-state.needs_review{color:#93661a}.quality-state.paused{color:#8d6770}
+.quality-pages{justify-content:flex-end;padding-top:10px;font-size:12px;color:var(--muted)}
+.quality-empty{padding:22px 12px;text-align:center;color:var(--muted);background:#f8f9f8;border-radius:8px;font-size:13px}
+.quality-error{font-size:12px;color:#a03d34}.quality-evidence{margin-top:16px;border:1px solid var(--line);border-radius:8px;padding:14px}
+.quality-evidence-heading{flex-wrap:wrap}.quality-evidence-heading>strong{font-size:14px}.quality-evidence-heading>.mono{font-size:11px;color:var(--muted);margin-right:auto}
+.quality-metrics{display:flex;gap:20px;flex-wrap:wrap;margin:15px 0;font-size:12px;color:#6a746d}.quality-metrics b{color:#35473b;margin-left:4px}
+.quality-reason-bar{justify-content:space-between;margin:10px 0;font-size:12px;color:var(--muted)}.quality-reason-bar select{max-width:260px}
+.quality-messages{max-height:300px;overflow:auto}.quality-messages article{border-top:1px solid #edf0ed;padding:11px 0}.quality-messages article>div{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.quality-messages strong{font-size:12px;color:#485e4e}.quality-messages time{margin-left:auto}.quality-messages p{font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;color:var(--ink)}
+.quality-message-reason{padding:2px 5px;border-radius:4px;background:#f1f4ee;color:#657559;font-size:10px}
+.quality-rules,.quality-commands{margin-top:16px;font-size:12px}.quality-rules summary,.quality-commands summary{cursor:pointer;color:#657468;padding:7px 0}.quality-commands label{display:block;margin:9px 0}.quality-commands textarea{width:100%;margin:6px 0 10px}
+.quality-rule-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}.quality-rule-grid label{display:grid;gap:7px;font-size:12px;color:var(--muted)}.quality-rule-grid input{width:100%}
+@media(max-width:1100px){.quality-heading{align-items:flex-start}.quality-tools{gap:5px}.quality-rule-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.anchor-detail-dialog .detail-live{padding-bottom:0}
+.detail-stop{background:#fff;border-color:#dce1dc;color:var(--ink)}
+.detail-stop svg{fill:#c65252;stroke:#c65252}
+.detail-stop:hover{background:#fff4f2;color:var(--ink)}
+.quality-basis{font-size:12px;line-height:1.6;color:#536653;margin:8px 0 12px}
+.quality-table-wrap,.quality-messages{overscroll-behavior:contain}
+.quality-table tr{transition:background 120ms ease}
+@media(prefers-reduced-motion:reduce){.quality-table tr{transition:none}}

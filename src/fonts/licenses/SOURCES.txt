@@ -1,0 +1,17 @@
+字体来源与许可（核验日期：2026-10-14）
+
+DouyinSansBold.otf：来自用户提供的“抖音美好体_猫啃网.zip”，未经修改。
+压缩包原始说明：DouyinSans-original-notice.txt。
+官方项目：https://github.com/bytedance/fonts
+官方完整许可：https://github.com/bytedance/fonts/blob/main/DouyinSans/OFL.txt
+完整许可原文副本：DouyinSans-OFL.txt。
+字体文件内原版权字段：Copyright(c) Beijing Founder Electronics Co.,Ltd. 北京北大方正电子有限公司。
+官方许可版权：Copyright (c) , 2023 Beijing Zitiao Network Technology Co. Ltd.
+
+ChillRoundM.otf：来自用户提供的“ChillRoundM_v1.805.zip”，未经修改。
+完整许可原文副本：ChillRoundM-OFL.txt，逐字节取自压缩包 LICENSE.txt。
+原许可版权：© 2023 ChillType, with Reserved Font Name 'ChillRoundF' 'ChillRoundM'。
+字体文件内原版权字段：Copyright 2021 The Zen Maru Gothic Authors (https://github.com/googlefonts/zen-marugothic)。
+
+两款字体按 SIL Open Font License 1.1 随应用分发。保留版权与完整许可，不单独销售字体。未修改字体、未作格式转换、未更改字体内部名称；字体不适用本项目 MIT 许可。
+原始文件哈希及元数据见 ../font-manifest.json。

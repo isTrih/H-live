@@ -1,0 +1,7 @@
+-- Historical schema shipped through 0.2.0. Keep independent of current DDL.
+CREATE TABLE anchors (anchor_id TEXT PRIMARY KEY NOT NULL,anchor_name TEXT NOT NULL,web_rid TEXT NOT NULL,first_seen TEXT NOT NULL,last_seen TEXT NOT NULL);
+CREATE TABLE sessions (anchor_id TEXT NOT NULL,session_id TEXT NOT NULL,anchor_name TEXT NOT NULL,web_rid TEXT NOT NULL,title TEXT NOT NULL,first_seen TEXT NOT NULL,last_seen TEXT NOT NULL,started_at TEXT,PRIMARY KEY(anchor_id,session_id));
+CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT,anchor_id TEXT NOT NULL,anchor_name TEXT NOT NULL,web_rid TEXT NOT NULL,session_id TEXT NOT NULL,sender_id TEXT NOT NULL,sender_name TEXT NOT NULL,message_type TEXT NOT NULL,content TEXT NOT NULL,message_time TEXT NOT NULL,received_at TEXT NOT NULL,time_source TEXT NOT NULL CHECK(time_source IN ('server','missing')),message_id TEXT NOT NULL,message_time_epoch REAL,received_at_epoch REAL NOT NULL,payload_json TEXT NOT NULL,CHECK(anchor_id<>'' AND session_id<>''),CHECK(message_type IN ('chat','gift','like','member','social','fansclub','emoji')),FOREIGN KEY(anchor_id,session_id) REFERENCES sessions(anchor_id,session_id));
+CREATE UNIQUE INDEX messages_server_identity ON messages(anchor_id,session_id,message_id) WHERE message_id<>'';
+CREATE INDEX messages_anchor_month ON messages(anchor_id,COALESCE(message_time_epoch,received_at_epoch));
+PRAGMA user_version=1;

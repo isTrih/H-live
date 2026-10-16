@@ -1,0 +1,20 @@
+[package]
+name = "qingkan-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Native message decoding, archive and streaming exports for Qingkan Live"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+rusqlite.workspace = true
+crossbeam-channel.workspace = true
+zip.workspace = true
+tempfile.workspace = true
+flate2.workspace = true
+prost.workspace = true
+unicode-casefold.workspace = true
+unicode-normalization.workspace = true

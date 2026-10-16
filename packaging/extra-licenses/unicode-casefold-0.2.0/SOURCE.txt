@@ -1,0 +1,10 @@
+unicode-casefold 0.2.0, unmodified. Published author: Chris Wong <lambda.fairy@gmail.com>.
+The exact published Cargo.toml declares license = "MIT/Apache-2.0". This distribution chooses the Apache-2.0 option.
+The crate/repository did not ship a standalone license or NOTICE file. Standard Apache-2.0 license text is included from the Apache Software Foundation.
+Published metadata: https://docs.rs/crate/unicode-casefold/0.2.0/source/Cargo.toml
+Repository: https://github.com/lambda-fairy/unicode-casefold
+Apache text: https://www.apache.org/licenses/LICENSE-2.0.txt
+The bundled generated tables declare Unicode version 9.0.0; Unicode data license is also included.
+Unicode license: https://www.unicode.org/license.txt
+Original table source: https://www.unicode.org/Public/9.0.0/ucd/CaseFolding.txt
+Retrieved 2026-10-15. These files preserve redistribution notices; no vendored code was modified.

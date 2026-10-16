@@ -1,0 +1,85 @@
+/* Original outline fonts are bundled locally; no remote font service is needed. */
+@font-face {
+  font-family: "LiveScope Douyin";
+  src: url("./fonts/DouyinSansBold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "LiveScope Douyin UI";
+  src: url("./fonts/DouyinSansBold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  /* Center the visible CJK ink, not the asymmetric native font box.
+     Measured in the app at 12–17px and checked in 200% raster captures.
+     Keep the original 1.202em total height; outlines and size stay unchanged. */
+  ascent-override: 105%;
+  descent-override: 15.2%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "LiveScope Chill";
+  src: url("./fonts/ChillRoundM.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "LiveScope Chill UI";
+  src: url("./fonts/ChillRoundM.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  /* This font uses the 1em OS/2 typo metrics. Its own optical baseline differs
+     from Douyin; preserve that total rather than reuse the Douyin correction. */
+  ascent-override: 100%;
+  descent-override: 0%;
+  line-gap-override: 0%;
+}
+:root {
+  --app-font: "LiveScope Douyin", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --app-ui-font: "LiveScope Douyin UI", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+}
+:root[data-font="chill"] {
+  --app-font: "LiveScope Chill", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  --app-ui-font: "LiveScope Chill UI", "Microsoft YaHei UI", "Segoe UI", sans-serif;
+}
+body {
+  font-family: var(--app-font);
+  font-synthesis: none;
+}
+/* Only compact controls and icon/label rows use the optical metrics. Keep
+   prose, message text, IDs and large numeric statistics on the original face. */
+button,
+.wordmark,
+.connection,
+.summary-label,
+.sort-label,
+.badge,
+.status,
+.live-indicator,
+.panel-title,
+.setting-title h2,
+.modal-header h2,
+.search input,
+select,
+.switch-label,
+.type-checks label {
+  font-family: var(--app-ui-font);
+}
+.appearance-panel {
+  margin-bottom: 20px;
+}
+.font-setting {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: #536258;
+}
+.font-setting select {
+  min-width: 220px;
+}

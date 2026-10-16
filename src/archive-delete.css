@@ -1,0 +1,11 @@
+.archive-delete-modal { display: flex; flex-direction: column; overflow: hidden; }
+.archive-delete-modal .modal-header, .archive-delete-modal .modal-footer { flex-shrink: 0; }
+.archive-delete-modal .modal-body { min-height: 0; overflow: auto; }
+.archive-delete-anchors { color: #424a51; line-height: 1.7; overflow-wrap: anywhere; max-height: 110px; overflow: auto; }
+.archive-session-picker { margin-top: 14px; max-height: 280px; overflow: auto; }
+.archive-session-picker label { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid #eceef0; }
+.archive-session-picker label > span { display: grid; gap: 5px; min-width: 0; }
+.archive-session-picker small { color: #747c85; overflow-wrap: anywhere; }
+.archive-delete-count { display: flex; align-items: baseline; gap: 14px; padding: 20px 0; }
+.archive-delete-count strong { font-size: 32px; color: #ad413a; font-variant-numeric: tabular-nums; }
+.archive-delete-count span { color: #656e76; }
