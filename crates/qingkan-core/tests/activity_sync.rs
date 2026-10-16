@@ -33,11 +33,7 @@ fn synthetic_lottery_sync_is_an_activity_instead_of_silently_ignored() {
     assert_eq!(event.payload["sender_id"], "");
     assert_eq!(event.payload["sender_name"], "");
     assert!(event.payload["activity_details"]["draw_at"].is_number());
-    let decoded = decode_frame(
-        &frame("WebcastRoomDataSyncMessage", raw),
-        "100000012000",
-    )
-    .unwrap();
+    let decoded = decode_frame(&frame("WebcastRoomDataSyncMessage", raw), "100000012000").unwrap();
     assert_eq!(decoded.events.len(), 1);
 }
 #[test]

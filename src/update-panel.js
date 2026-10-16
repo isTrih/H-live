@@ -1,5 +1,5 @@
 import { version as appVersion } from "../package.json";
-import currentNotes from "../release-notes/0.2.4.md?raw";
+import currentNotes from "../release-notes/0.3.0.md?raw";
 import { getUpdaterState } from "./updater.js";
 import "./updater.css";
 import { automaticUpdatesEnabled } from "./automatic-updates.js";

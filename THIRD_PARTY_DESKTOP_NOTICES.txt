@@ -1,599 +1,326 @@
-氢看直播 0.2.4 - desktop and native dependencies
-
-Includes Windows runtime and build-time packages from both resolved dependency graphs.
-License texts: licenses/desktop/. src-tauri/Cargo.lock, crates/Cargo.lock and package-lock.json pin versions.
-
+H-live / 氢看直播 0.3.0 - Rust, JavaScript and font dependencies
+Upstream notices: LICENSE and licenses/upstream. Dependency texts: licenses/.
 adler2 2.0.1: 0BSD OR MIT OR Apache-2.0
-  Unmodified source: https://github.com/oyvindln/adler2/tree/89a031a0f42eeff31c70dc598b398cbf31f1680f
 aho-corasick 1.1.5: Unlicense OR MIT
-  Unmodified source: https://github.com/BurntSushi/aho-corasick/tree/5178060ce73d91938f8582d0360e3be031380440
 alloc-no-stdlib 3.0.0: BSD-3-Clause
-  Unmodified source: https://github.com/dropbox/rust-alloc-no-stdlib/tree/c87781251c135aa8d099da54b60287f4ff0ccf1c
 alloc-stdlib 0.3.0: BSD-3-Clause
-  Unmodified source: https://github.com/dropbox/rust-alloc-no-stdlib/tree/0a81fd6928ea3b33c8cd484aa4575d50ffb98012
 anyhow 1.0.104: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/anyhow/tree/1dbe1862aae650423e3361fbd20b7d17c5109cc3
+async-compression 0.4.50: MIT OR Apache-2.0
 atomic-waker 1.1.2: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/smol-rs/atomic-waker/tree/9969a29ccd1fe298e2df7346849c0095ba303a64
 autocfg 1.5.1: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/cuviper/autocfg/tree/2799b09c24e6632f8e653c5cd8fc303e85a906ba
 base64 0.22.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/marshallpierce/rust-base64/tree/e14400697453bcc85997119b874bc03d9601d0af
 base64 0.23.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/marshallpierce/rust-base64/tree/069bf7067b949f5c0a92b6ceb82492920502f2c2
 bit-set 0.8.0: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/contain-rs/bit-set/tree/2b8861d23b53d63d326d2694ddabde6e7b19fbd0
 bit-vec 0.8.0: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/contain-rs/bit-vec/tree/16d8d5ed27e9d379ae5d531ffcf7535cd02ef8f3
 bitflags 1.3.2: MIT/Apache-2.0
-  Unmodified source: https://github.com/bitflags/bitflags/tree/ed185cfb1c447c1b4bd6ac021c9ec3bb02c9e2f2
 bitflags 2.13.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/bitflags/bitflags/tree/80ce9b545acb0bd42150695fc351889cac1d8eb4
 block-buffer 0.10.4: MIT OR Apache-2.0
-  Unmodified source: https://github.com/RustCrypto/utils/tree/6d35952d3d3b124bc1049ad6fb406b42b1ce4bfe
+block-buffer 0.12.1: MIT OR Apache-2.0
 brotli 9.0.0: BSD-3-Clause AND MIT
-  Unmodified source: https://github.com/dropbox/rust-brotli/tree/a51b65e75f68e3485be12bc816118e523e95647d
 brotli-decompressor 6.0.1: BSD-3-Clause/MIT
-  Unmodified source: https://github.com/dropbox/rust-brotli-decompressor/tree/e4f3bf3326256a5dc23e5fa9276d803f6a4ad527
 bumpalo 3.20.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/fitzgen/bumpalo/tree/84654ace6be4444da3ff102a0a0af3b38c4df4fb
 byteorder 1.5.0: Unlicense OR MIT
-  Unmodified source: https://github.com/BurntSushi/byteorder/tree/ec068eefa042d494475db125c4b034bd8e9e34dd
 bytes 1.12.1: MIT
-  Unmodified source: https://github.com/tokio-rs/bytes/tree/76c0fbb54ed4336caf9d2311658a2f4a5627c21d
 camino 1.2.6: MIT OR Apache-2.0
-  Unmodified source: https://github.com/camino-rs/camino/tree/86ed28351d83fa7ef8287bcd5af36b8a4f073c0c
 cargo-platform 0.1.9: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/cargo/tree/5ffbef3211a8c378857905775a15c5b32a174d3b
 cargo_metadata 0.19.2: MIT
-  Unmodified source: https://github.com/oli-obk/cargo_metadata/tree/0b4be024c57d7855a2dfbdf2ec2a48f3e16e9f78
 cargo_toml 1.0.1: Apache-2.0 OR MIT
-  Unmodified source: https://gitlab.com/lib.rs/cargo_toml/tree/57e06c4f4eb702469db46ef1aa144b9d11e63171
 cc 1.8.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/cc-rs/tree/d0454eee9b9f046c4c3462b59e78145d81cc6b92
 cfb 0.14.0: MIT
-  Unmodified source: https://github.com/mdsteele/rust-cfb/tree/45d0d07adc8e95f9c239ac7dcc42761b1347ed3e
 cfg-if 1.0.5: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/cfg-if/tree/8b0a2b0fc1fa3b3741b9e72895f390cf499fe36f
+chacha20 0.10.2: MIT OR Apache-2.0
 chrono 0.4.45: MIT OR Apache-2.0
-  Unmodified source: https://github.com/chronotope/chrono/tree/170338250e836976a211e64728ec956e45e78a39
+compression-codecs 0.4.45: MIT OR Apache-2.0
+compression-core 0.4.33: MIT OR Apache-2.0
+const-oid 0.10.2: Apache-2.0 OR MIT
 cookie 0.18.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/SergioBenitez/cookie-rs/tree/1ec8fded5654679482a91c784e7ff2874b0fdeff
 cpufeatures 0.2.17: MIT OR Apache-2.0
-  Unmodified source: https://github.com/RustCrypto/utils/tree/9d92d5e95ab4c07c5d8bfd024bf2a17e96d20feb
+cpufeatures 0.3.1: MIT OR Apache-2.0
 crc32fast 1.5.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/srijs/rust-crc32fast/tree/7eb0b8a2c9b246d27dc4cb5a53d3fc3b43a4bb83
 crossbeam-channel 0.5.17: MIT OR Apache-2.0
-  Unmodified source: https://github.com/crossbeam-rs/crossbeam/tree/2920c984290229ab4e0ca0452ef09e48a82063f3
 crossbeam-utils 0.8.23: MIT OR Apache-2.0
-  Unmodified source: https://github.com/crossbeam-rs/crossbeam/tree/2920c984290229ab4e0ca0452ef09e48a82063f3
 crypto-common 0.1.7: MIT OR Apache-2.0
-  Unmodified source: https://github.com/RustCrypto/traits/tree/66a997ccf5776ce873da5a48e2885a9908e940f6
+crypto-common 0.2.2: MIT OR Apache-2.0
 cssparser 0.37.0: MPL-2.0
-  Unmodified source: https://github.com/servo/rust-cssparser/tree/4c49486494fb24dc01390e3baca9698ef1744c71
 cssparser-macros 0.7.1: MPL-2.0
-  Unmodified source: https://github.com/servo/rust-cssparser/tree/d128a90e1203fc4afb959420d6dc5e24f77a3191
+csv 1.4.0: Unlicense/MIT
+csv-core 0.1.13: Unlicense/MIT
 ctor 1.0.13: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/mmastrac/linktime/tree/00ca36a7ed6d959d01866feeeec078a79b6dfa3f
 darling 0.24.1: MIT
-  Unmodified source: https://github.com/TedDriggs/darling/tree/6b68cbe74cf5a7684c406f09558afc854022f824
 darling_core 0.24.1: MIT
-  Unmodified source: https://github.com/TedDriggs/darling/tree/6b68cbe74cf5a7684c406f09558afc854022f824
 darling_macro 0.24.1: MIT
-  Unmodified source: https://github.com/TedDriggs/darling/tree/6b68cbe74cf5a7684c406f09558afc854022f824
+data-encoding 2.11.1: MIT
 deranged 0.5.9: MIT OR Apache-2.0
-  Unmodified source: https://github.com/jhpratt/deranged/tree/aeb03a4be17fe287d5fdd509e9ae134d4b9999fc
 derive_more 2.1.1: MIT
-  Unmodified source: https://github.com/JelteF/derive_more/tree/f7bb41ac054c060caaf5ff3212e74e42794cb4b4
 derive_more-impl 2.1.1: MIT
-  Unmodified source: https://github.com/JelteF/derive_more/tree/f7bb41ac054c060caaf5ff3212e74e42794cb4b4
 digest 0.10.7: MIT OR Apache-2.0
-  Unmodified source: https://github.com/RustCrypto/traits/tree/344389411fd9718a0742435152e933a9e71461ee
+digest 0.11.3: MIT OR Apache-2.0
 dirs 7.0.0: MIT OR Apache-2.0
-  Unmodified source: https://codeberg.org/dirs/dirs-rs/tree/793c8a97bea55669a806499839abd7b1d844279f
 dirs-sys 0.5.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dirs-dev/dirs-sys-rs/tree/8bcd4aa2c35990d57a2cff2953793525fc42709c
 displaydoc 0.2.7: MIT OR Apache-2.0
-  Unmodified source: https://github.com/yaahc/displaydoc/tree/20016487354a96b22a7b97974483ae4f51a1bddc
 dom_query 0.28.0: MIT
-  Unmodified source: https://github.com/niklak/dom_query/tree/186c02d9359762404054fbc8af3a5b07cdf795a9
 dpi 0.1.2: Apache-2.0 AND MIT
-  Unmodified source: https://github.com/rust-windowing/winit/tree/587ade844dfb0eada3696ba1cb263c66eea80581
 dtoa 1.0.11: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/dtoa/tree/4c30faa2d91f167d7c343d13ebc9d30730456d56
 dtoa-short 0.3.5: MPL-2.0
-  Unmodified source: https://github.com/upsuper/dtoa-short/tree/2d905cdb8b2e08163dc0d015f529877fe657b4ef
 dunce 1.0.5: CC0-1.0 OR MIT-0 OR Apache-2.0
-  Unmodified source: https://gitlab.com/kornelski/dunce/tree/1ee29a83526c9f4c3618e1335f0454c878a54dcf
 dyn-clone 1.0.20: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/dyn-clone/tree/1d2d15c5d9d0d538c9da2141a75422d94c6be194
 either 1.19.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rayon-rs/either/tree/1e4326df5972eb4a0ced66cb3b67fa0c5aca8493
 embed-resource 3.0.12: MIT
-  Unmodified source: https://github.com/nabijaczleweli/rust-embed-resource/tree/0d183985c33096a658c3fd8ba19d7eec6cee1dba
 equivalent 1.0.3: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/indexmap-rs/equivalent/tree/4ee88130bd4ab3229e785533da2af641be22deac
 erased-serde 0.4.10: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/erased-serde/tree/4bea873f4c8437826792a4ed802ebd016569c4bc
 fallible-iterator 0.3.0: MIT/Apache-2.0
-  Unmodified source: https://github.com/sfackler/rust-fallible-iterator/tree/11cfa0558045e52bdb473c9eab6a1eb35a54e302
 fallible-streaming-iterator 0.1.9: MIT/Apache-2.0
 fastrand 2.5.0: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/smol-rs/fastrand/tree/7a1cc2c69ebde6cb3442809213db3fe19a2cb0ba
 fdeflate 0.3.7: MIT OR Apache-2.0
-  Unmodified source: https://github.com/image-rs/fdeflate/tree/c365c7e6ffa81feb2e1fb762eed7299f05c9b0ca
 find-msvc-tools 0.1.14: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/cc-rs/tree/6b0d8e68bf09545a4de9a3cc10efcc0e4b6211bd
 flate2 1.1.10: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/flate2-rs/tree/ed93d4fc60eaf876c6aded741bf992d524551930
 fnv 1.0.7: Apache-2.0 / MIT
-  Unmodified source: https://github.com/servo/rust-fnv/tree/4b4784ebfd3332dc61f0640764d6f1140e03a9ab
 foldhash 0.2.0: Zlib
-  Unmodified source: https://github.com/orlp/foldhash/tree/8f878c636fda9c9e93384824ea45e06d03f009f5
 form_urlencoded 1.2.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/rust-url/tree/91377f48bf35011d042aa5abef9e7f2a0a625aaa
 futures-channel 0.3.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/futures-rs/tree/705e6b5c0f06535b1aac1cb1989a172b3d45be8c
 futures-core 0.3.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/futures-rs/tree/705e6b5c0f06535b1aac1cb1989a172b3d45be8c
 futures-macro 0.3.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/futures-rs/tree/705e6b5c0f06535b1aac1cb1989a172b3d45be8c
 futures-sink 0.3.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/futures-rs/tree/705e6b5c0f06535b1aac1cb1989a172b3d45be8c
 futures-task 0.3.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/futures-rs/tree/705e6b5c0f06535b1aac1cb1989a172b3d45be8c
 futures-util 0.3.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/futures-rs/tree/705e6b5c0f06535b1aac1cb1989a172b3d45be8c
 generic-array 0.14.7: MIT
-  Unmodified source: https://github.com/fizyk20/generic-array.git/tree/1397d2bb40c406901b7827161b73b34b056cbe3a
 getrandom 0.2.17: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-random/getrandom/tree/b625985d852600a3eeb68556811e59e7c9a6a098
 getrandom 0.3.4: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-random/getrandom/tree/38e4ad38309a85b56eef4fc759535ccfc322ba9a
 getrandom 0.4.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-random/getrandom/tree/5e7cd5733536844a9856dc7259bd4696bbe5e3ae
 glob 0.3.4: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/glob/tree/cfa2a58f2e44373573f657ec25b3621e44714dee
 hashbrown 0.12.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/hashbrown/tree/1d2c1a81d1b53285decbd64410a21a90112613d7
 hashbrown 0.17.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/hashbrown/tree/c62a63a61b7caf2de8f9ecb7b06a66b0ab6bdf3d
 hashlink 0.12.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/djc/hashlink/tree/c7aaa3c2504c08baf8c97da11f3536258464da8f
 heck 0.5.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/withoutboats/heck/tree/070693322aee7c5c7fbee7c9964bf8d7d3a29c96
 html5ever 0.39.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/html5ever/tree/ce64836c685025a5fef0860fa2e9c80b2683e8d0
 http 1.5.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/hyperium/http/tree/e559023f67e3fad6ecc3ee91307be178e0f13626
 http-body 1.1.0: MIT
-  Unmodified source: https://github.com/hyperium/http-body/tree/2fb78de9c875c364b7eb1a1a117acc3b83ffb13a
 http-body-util 0.1.5: MIT
-  Unmodified source: https://github.com/hyperium/http-body/tree/07838bd97b714b95bd783cd695ebf211b67545c4
 httparse 1.10.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/seanmonstar/httparse/tree/9f29e79f9832dbd0ae5220acb17c1866745bdecd
+hybrid-array 0.4.15: MIT OR Apache-2.0
 hyper 1.12.0: MIT
-  Unmodified source: https://github.com/hyperium/hyper/tree/7f67699ce32d717081deb7018b4da7d679277ac0
 hyper-rustls 0.27.10: Apache-2.0 OR ISC OR MIT
-  Unmodified source: https://github.com/rustls/hyper-rustls/tree/ce45b6b0dfdf238f9058b89feb1e3b8eaebbc5b0
 hyper-util 0.1.21: MIT
-  Unmodified source: https://github.com/hyperium/hyper-util/tree/23a868965964c1d6bb1b94f30ba4c420a4bebe7c
 ico 0.5.0: MIT
-  Unmodified source: https://github.com/mdsteele/rust-ico/tree/3a50a03759bd5dff2916b0e8324642b2dd0f66ff
 icu_collections 2.3.0: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 icu_locale_core 2.3.0: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 icu_normalizer 2.3.0: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 icu_normalizer_data 2.3.0: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 icu_properties 2.3.0: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 icu_properties_data 2.3.0: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 icu_provider 2.3.1: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/898d79c69f37da7b45a15a5714663c9b59b3d928
 ident_case 1.0.1: MIT/Apache-2.0
-  Unmodified source: https://github.com/TedDriggs/ident_case/tree/bf0d863e3006b40a0d923a81d7b2dd2db1136c2c
 idna 1.1.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/rust-url//tree/91377f48bf35011d042aa5abef9e7f2a0a625aaa
 idna_adapter 1.2.2: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/hsivonen/idna_adapter/tree/1d9782f32c9e29218542b4a9411a82b35ec5c8cb
 indexmap 1.9.3: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/bluss/indexmap/tree/861fad73de14b7f08d2dc56ed83607aef621b42e
 indexmap 2.14.2: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/indexmap-rs/indexmap/tree/41a870887c4c77adf665886e63df08f406bfe37a
 infer 0.22.0: MIT
-  Unmodified source: https://github.com/bojand/infer/tree/cb05400c5f43e07200fbc1c5753e15946e9b1de8
 ipnet 2.12.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/krisprice/ipnet/tree/13c5c5873c02127679b1e8e64b538e4e36942640
 itertools 0.14.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-itertools/itertools/tree/a015a6831525ee1637df747d3f530a627d9741bf
 itoa 1.0.18: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/itoa/tree/af77385d0daf4d0e949e81f2588be2e44f69f086
 json-patch 4.2.0: MIT/Apache-2.0
-  Unmodified source: https://github.com/idubrov/json-patch/tree/1b0f707f9f4aad1009f0364f6ca73c5e88cdd85c
 jsonptr 0.7.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/chanced/jsonptr/tree/c0201c7c45ab3f9982601cfe6947c64a0106d589
 keyboard-types 0.8.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-windowing/keyboard-types/tree/24446d6fe974bca4303affd07072939f4a7aab6f
 libc 0.2.190: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/libc/tree/7b0ab5528dc7f361f3a0b4c06c2cad9971617f75
 libsqlite3-sys 0.38.2: MIT
-  Unmodified source: https://github.com/rusqlite/rusqlite/tree/e88f112bef7899234a497baed5cc3c3d553deeb8
 litemap 0.8.3: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 lock_api 0.4.14: MIT OR Apache-2.0
-  Unmodified source: https://github.com/Amanieu/parking_lot/tree/d7828fff7b5d6327ae608e82db45f888b344449a
 log 0.4.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/log/tree/8034743dd9d7f7583bd9a670271483d176130911
 markup5ever 0.39.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/html5ever/tree/ce64836c685025a5fef0860fa2e9c80b2683e8d0
+md-5 0.10.6: MIT OR Apache-2.0
 memchr 2.8.3: Unlicense OR MIT
-  Unmodified source: https://github.com/BurntSushi/memchr/tree/5fdb40c054e1fff359a2f7bdf7f87a13b34b465d
 mime 0.3.17: MIT OR Apache-2.0
-  Unmodified source: https://github.com/hyperium/mime/tree/ce5062d216bf757a0ed3fc70f0fe255d1c8d74ae
 minisign-verify 0.3.0: MIT
-  Unmodified source: https://github.com/jedisct1/rust-minisign-verify/tree/96b921399b87b29e29cb5dc948b99b465ca58489
 miniz_oxide 0.8.9: MIT OR Zlib OR Apache-2.0
-  Unmodified source: https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide/tree/44e43c7786e379b2b1a7fde4aa0e63be719e583d
 miniz_oxide 0.9.1: MIT OR Zlib OR Apache-2.0
-  Unmodified source: https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide/tree/4e582392df3a739d2b0dfd2c537dc33e8942be38
 mio 1.2.4: MIT
-  Unmodified source: https://github.com/tokio-rs/mio/tree/79d1417c94e3a45c8bdd796e5422e22e8c488086
 muda 0.20.0: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/muda/tree/87a3560b386243b50812cf0fa2836f3d07062a57
 new_debug_unreachable 1.0.6: MIT
-  Unmodified source: https://github.com/mbrubeck/rust-debug-unreachable/tree/4b3fa6e0b6d728ed2018690e087a440dd29e7d06
 num-conv 0.2.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/jhpratt/num-conv/tree/b022fe87ac3ad5b0d7606ea7465549eaa92efe97
 num-traits 0.2.19: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-num/num-traits/tree/7ec3d41d39b28190ec1d42db38021107b3951f3a
 once_cell 1.21.4: MIT OR Apache-2.0
-  Unmodified source: https://github.com/matklad/once_cell/tree/80fe900b21f6d76c1a2ed74d3343e8a3a88c46d0
 option-ext 0.2.0: MPL-2.0
-  Unmodified source: https://github.com/soc/option-ext.git/tree/272f22fc9ea1ac6b08f01704af52c4ac338df4e2
 parking_lot 0.12.5: MIT OR Apache-2.0
-  Unmodified source: https://github.com/Amanieu/parking_lot/tree/d7828fff7b5d6327ae608e82db45f888b344449a
 parking_lot_core 0.9.12: MIT OR Apache-2.0
-  Unmodified source: https://github.com/Amanieu/parking_lot/tree/d7828fff7b5d6327ae608e82db45f888b344449a
 percent-encoding 2.3.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/rust-url//tree/91377f48bf35011d042aa5abef9e7f2a0a625aaa
 phf 0.13.1: MIT
-  Unmodified source: https://github.com/rust-phf/rust-phf/tree/1e518a6e94a2444b8df7d89078cfc69859537971
 phf_codegen 0.13.1: MIT
-  Unmodified source: https://github.com/rust-phf/rust-phf/tree/1e518a6e94a2444b8df7d89078cfc69859537971
 phf_generator 0.13.1: MIT
-  Unmodified source: https://github.com/rust-phf/rust-phf/tree/1e518a6e94a2444b8df7d89078cfc69859537971
 phf_macros 0.13.1: MIT
-  Unmodified source: https://github.com/rust-phf/rust-phf/tree/1e518a6e94a2444b8df7d89078cfc69859537971
 phf_shared 0.13.1: MIT
-  Unmodified source: https://github.com/rust-phf/rust-phf/tree/1e518a6e94a2444b8df7d89078cfc69859537971
 pin-project-lite 0.2.17: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/taiki-e/pin-project-lite/tree/3bdf763446aa78f90e3bdac1ef583e014832ab4c
 pkg-config 0.3.34: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/pkg-config-rs/tree/a8852cc148f8f7d504bf3a62444c298dcd3637f0
 plist 1.10.1: MIT
-  Unmodified source: https://github.com/ebarnard/rust-plist//tree/10ba3e3b44adb6246f3f5cc8e66134e03498f634
 png 0.17.16: MIT OR Apache-2.0
-  Unmodified source: https://github.com/image-rs/image-png/tree/fbf256669ff23594bf4c618b61fde6a52b79e088
 png 0.18.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/image-rs/image-png/tree/2a3f980245e3ae38b82ade96533e7b450e8477bb
 potential_utf 0.1.6: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 powerfmt 0.2.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/jhpratt/powerfmt/tree/3dd45162a7e64d6b354675e4282d0550dce8bfc8
+ppv-lite86 0.2.21: MIT OR Apache-2.0
 precomputed-hash 0.1.1: MIT
 proc-macro2 1.0.107: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/proc-macro2/tree/ed8a5497669cd63db33bf24646f261b012bbbc4a
 prost 0.14.4: Apache-2.0
-  Unmodified source: https://github.com/tokio-rs/prost/tree/13646cde7eab75c81b3047767aa0a86e7dbecf12
 prost-derive 0.14.4: Apache-2.0
-  Unmodified source: https://github.com/tokio-rs/prost/tree/13646cde7eab75c81b3047767aa0a86e7dbecf12
-pyo3 0.29.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/pyo3/pyo3/tree/451d99fdcdcddf159e8e0a1186960b332cdb5d7c
-pyo3-build-config 0.29.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/pyo3/pyo3/tree/451d99fdcdcddf159e8e0a1186960b332cdb5d7c
-pyo3-ffi 0.29.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/pyo3/pyo3/tree/451d99fdcdcddf159e8e0a1186960b332cdb5d7c
-pyo3-macros 0.29.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/pyo3/pyo3/tree/451d99fdcdcddf159e8e0a1186960b332cdb5d7c
-pyo3-macros-backend 0.29.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/pyo3/pyo3/tree/451d99fdcdcddf159e8e0a1186960b332cdb5d7c
 quick-xml 0.42.0: MIT
-  Unmodified source: https://github.com/tafia/quick-xml/tree/36a2c52a4f6c90878c3f60c3c3b5c62efaef28a9
 quote 1.0.47: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/quote/tree/723dcb47d3f0ddc896e17287c8a8d3f2ea2317d5
+rand 0.9.5: MIT OR Apache-2.0
+rand 0.10.3: MIT OR Apache-2.0
+rand_chacha 0.9.0: MIT OR Apache-2.0
+rand_core 0.9.5: MIT OR Apache-2.0
+rand_core 0.10.1: MIT OR Apache-2.0
 raw-window-handle 0.6.2: MIT OR Apache-2.0 OR Zlib
-  Unmodified source: https://github.com/rust-windowing/raw-window-handle/tree/5fda8e8420b069368e9450e70c2869e32dcdffc1
 regex 1.13.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/regex/tree/2b527599eb9eea0dcc288c704584f242f26a5c61
 regex-automata 0.4.18: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/regex/tree/e6ad938198e68339a593f85d228f2d44cb54718f
 regex-syntax 0.8.11: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/regex/tree/140167995737fa11dfe11b8af8b9aa143b790b4e
 reqwest 0.13.5: MIT OR Apache-2.0
-  Unmodified source: https://github.com/seanmonstar/reqwest/tree/de55373434f07f42926599dbb5a88550d8e55112
 rfd 0.17.2: MIT
-  Unmodified source: https://github.com/PolyMeilex/rfd/tree/cca0cfa5fc38c2752c9c98f9f5168904a515fd55
 ring 0.17.14: Apache-2.0 AND ISC
-  Unmodified source: https://github.com/briansmith/ring/tree/2723abbca9e83347d82b056d5b239c6604f786df
 rusqlite 0.40.2: MIT
-  Unmodified source: https://github.com/rusqlite/rusqlite/tree/e88f112bef7899234a497baed5cc3c3d553deeb8
 rustc-hash 2.1.3: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/rust-lang/rustc-hash/tree/c13e7ccca705e6255387a2ebc6dca142d6881621
 rustc_version 0.4.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/djc/rustc-version-rs/tree/eeca449cca83e24150e46739e797aa82e9142809
 rustls 0.23.46: Apache-2.0 OR ISC OR MIT
-  Unmodified source: https://github.com/rustls/rustls/tree/f04804fa13341a9b1dc02b5d1dd8a746f2c4b7fb
 rustls-pki-types 1.15.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rustls/pki-types/tree/e29ad15465126acc089b39611bcec85e27ce0817
 rustls-platform-verifier 0.7.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rustls/rustls-platform-verifier/tree/252e25161a91af476cbea620e29d277592d27ec7
 rustls-webpki 0.103.15: ISC
-  Unmodified source: https://github.com/rustls/webpki/tree/c14836d8de33c0ad0ac7dcb28fe9aade20831a4d
+ryu 1.0.23: Apache-2.0 OR BSL-1.0
 same-file 1.0.6: Unlicense/MIT
-  Unmodified source: https://github.com/BurntSushi/same-file/tree/5799cd323b8eefd17a089c950dac113f66c89c9e
 schemars 0.8.22: MIT
-  Unmodified source: https://github.com/GREsau/schemars/tree/104b0fd65055d4b46f8dcbe38cdd2ef2c4098fe2
 schemars_derive 0.8.22: MIT
-  Unmodified source: https://github.com/GREsau/schemars/tree/104b0fd65055d4b46f8dcbe38cdd2ef2c4098fe2
 scopeguard 1.2.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/bluss/scopeguard/tree/bb988222848d39b0b9037b29da3a3a1eb05ebf4b
 selectors 0.38.0: MPL-2.0
-  Unmodified source: https://github.com/servo/stylo/tree/572ecba2d1600e7c3d490586692a209faf703baa
 semver 1.0.28: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/semver/tree/7625c7aa3f0e8ba21e099d1765bcebcb72aa8816
 serde 1.0.229: MIT OR Apache-2.0
-  Unmodified source: https://github.com/serde-rs/serde/tree/7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8
 serde-untagged 0.1.9: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/serde-untagged/tree/3097fd8be3d5a6fc295c974cdf27c4d89143a693
 serde_core 1.0.229: MIT OR Apache-2.0
-  Unmodified source: https://github.com/serde-rs/serde/tree/7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8
 serde_derive 1.0.229: MIT OR Apache-2.0
-  Unmodified source: https://github.com/serde-rs/serde/tree/7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8
 serde_derive_internals 0.29.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/serde-rs/serde/tree/87f635e54d5359fa0eb94b1ef0a684ee3d24cb85
 serde_json 1.0.154: MIT OR Apache-2.0
-  Unmodified source: https://github.com/serde-rs/json/tree/20572a6d066958542d79cdd6cf1a7cd9f0c8e1f8
 serde_repr 0.1.21: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/serde-repr/tree/205ce23cf7c55981be8c1e02ac87695c57a13ee0
 serde_spanned 1.1.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/toml-rs/toml/tree/f72038c2508112dfaaedb227a511f91bf9b2015c
 serde_with 3.24.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/jonasbb/serde_with//tree/35ac84c8faf34d6822991bbf2397056994c9208b
 serde_with_macros 3.24.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/jonasbb/serde_with//tree/35ac84c8faf34d6822991bbf2397056994c9208b
 serialize-to-javascript 0.1.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/chippers/serialize-to-javascript/tree/5401db83de0d561231605bf658c2f468dbe7ffd1
 serialize-to-javascript-impl 0.1.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/chippers/serialize-to-javascript/tree/5401db83de0d561231605bf658c2f468dbe7ffd1
 servo_arc 0.4.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/stylo/tree/f319793c6989dba83994fbd10d560b21ad4a0c85
+sha1 0.11.0: MIT OR Apache-2.0
 sha2 0.10.9: MIT OR Apache-2.0
-  Unmodified source: https://github.com/RustCrypto/hashes/tree/82c36a428f8d6f05f3bfccdedb243e9d1f85359d
 shlex 2.0.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/comex/rust-shlex/tree/e82b1411beb7c92871c2c078c9ab415bbcf207ef
 simd-adler32 0.3.10: MIT
-  Unmodified source: https://github.com/mcountryman/simd-adler32/tree/d93164f98d7fe2daf883f2e1bec82778dd26199a
 siphasher 1.0.4: MIT OR Apache-2.0
-  Unmodified source: https://github.com/jedisct1/rust-siphash/tree/ed028f01a16205b0819fa83b0cdc052e2d5ac3b7
 slab 0.4.12: MIT
-  Unmodified source: https://github.com/tokio-rs/slab/tree/a1e4346070a48c936d808de75191dee5d01e433c
 smallvec 1.16.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/rust-smallvec/tree/bb9e44b68571e28e88196dcdb11fab89f3df5a0a
 socket2 0.6.5: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-lang/socket2/tree/239dd83a4ced08e514d2c38942aab99791119f0d
 softbuffer 0.4.8: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rust-windowing/softbuffer/tree/d871852faa1137d4615b99b9ad31c3ba80f345b5
 stable_deref_trait 1.2.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/storyyeller/stable_deref_trait/tree/30002b4228f7cdee309217b6bf6eee099dda0b00
 string_cache 0.9.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/string-cache/tree/eb5ad11b53a8e132fa09781f062c47ce352f80d6
 string_cache_codegen 0.6.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/string-cache/tree/fd1475d07d5ff30e5d2ca343671577c77ab5679a
 strsim 0.11.1: MIT
-  Unmodified source: https://github.com/rapidfuzz/strsim-rs/tree/76c5a900e6e12cfc605eee5ab6e36300384c8682
 subtle 2.6.1: BSD-3-Clause
-  Unmodified source: https://github.com/dalek-cryptography/subtle/tree/5457b5448b021d1da101ababbb854e6657233943
 syn 2.0.119: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/syn/tree/3295f9e9841785ac88a5e558c884854d5fb7d67f
 syn 3.0.9: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/syn/tree/7c44a5565b4421035101cc16184e9af08ab5fc77
 sync_wrapper 1.0.2: Apache-2.0
-  Unmodified source: https://github.com/Actyx/sync_wrapper/tree/55413956c36aeab47feb8c04d1b7a044d6df336a
 synstructure 0.14.0: MIT
-  Unmodified source: https://github.com/mystor/synstructure/tree/30cfafe36e42405e717a8e55da042a2835a698d7
 tao 0.37.1: Apache-2.0
-  Unmodified source: https://github.com/tauri-apps/tao/tree/37b7e8bc90a050e93be988df636f322c3ef147b6
-target-lexicon 0.13.5: Apache-2.0 WITH LLVM-exception
-  Unmodified source: https://github.com/bytecodealliance/target-lexicon/tree/6647bd7d681d3e218c88568d8285dfd8cae2dd97
 tauri 2.12.3: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/5b23c82ea5ba6b9aec420dd71f60493edc486aa9
 tauri-build 2.7.2: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/5b23c82ea5ba6b9aec420dd71f60493edc486aa9
 tauri-codegen 2.7.2: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/5b23c82ea5ba6b9aec420dd71f60493edc486aa9
 tauri-macros 2.7.2: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/5b23c82ea5ba6b9aec420dd71f60493edc486aa9
 tauri-plugin 2.7.1: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/30da1fd6e17de6107ecc850c95dfb16b5729f2dd
 tauri-plugin-single-instance 2.5.3: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/plugins-workspace/tree/6bbd44d4ef254d835a12c6d7bdf2a8a61778031a
 tauri-plugin-updater 2.13.3: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/plugins-workspace/tree/6bbd44d4ef254d835a12c6d7bdf2a8a61778031a
 tauri-runtime 2.12.1: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/30da1fd6e17de6107ecc850c95dfb16b5729f2dd
 tauri-runtime-wry 2.12.1: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/30da1fd6e17de6107ecc850c95dfb16b5729f2dd
 tauri-utils 2.10.1: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri/tree/30da1fd6e17de6107ecc850c95dfb16b5729f2dd
 tauri-winres 0.3.6: MIT
-  Unmodified source: https://github.com/tauri-apps/winres/tree/9c2f320daf968f12669a48cefe57639bb79c50b7
 tempfile 3.27.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/Stebalien/tempfile/tree/5c8fa12eb584931b4f1bccfde87eb72fbfa7dc61
 tendril 0.5.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/html5ever/tree/d64dfd4c21cf2451649107ade7eaf042d95fbc5a
+thiserror 1.0.69: MIT OR Apache-2.0
 thiserror 2.0.21: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/thiserror/tree/b1827ee06f81a7d7f954e676771e19a97f9f8e3b
+thiserror-impl 1.0.69: MIT OR Apache-2.0
 thiserror-impl 2.0.21: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/thiserror/tree/b1827ee06f81a7d7f954e676771e19a97f9f8e3b
 time 0.3.55: MIT OR Apache-2.0
-  Unmodified source: https://github.com/time-rs/time/tree/857d9c404c5b6f6cb64d1bfa604c695be3369e12
 time-core 0.1.9: MIT OR Apache-2.0
-  Unmodified source: https://github.com/time-rs/time/tree/5d8737c39b9170c36c99cfc1f9f49cf0c059c63a
 time-macros 0.2.32: MIT OR Apache-2.0
-  Unmodified source: https://github.com/time-rs/time/tree/d1c55a454051c83e8fd2ad8431cf37b90dd6ea31
 tinystr 0.8.4: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 tinyvec 1.13.3: Zlib OR Apache-2.0 OR MIT
-  Unmodified source: https://github.com/Lokathor/tinyvec/tree/e343bbbb5a6594c9d57de718e6f232e6c0115dcb
 tokio 1.53.3: MIT
-  Unmodified source: https://github.com/tokio-rs/tokio/tree/a85c3f5baa298a6b554fd3700daf0342289881af
+tokio-macros 2.7.2: MIT
 tokio-rustls 0.26.6: MIT OR Apache-2.0
-  Unmodified source: https://github.com/rustls/tokio-rustls/tree/8aebb7c9556ea8024c1b974b84a4a6f2e306889a
+tokio-socks 0.5.3: MIT
+tokio-tungstenite 0.30.0: MIT
 tokio-util 0.7.20: MIT
-  Unmodified source: https://github.com/tokio-rs/tokio/tree/5ec9e6b8d5a7111fe9cd35a637bd8b4e4eb1e483
 toml 1.1.8+spec-1.1.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/toml-rs/toml/tree/ceac6e4412420d5a5c19e4f7293ad005cf1a31b2
 toml_datetime 1.1.2+spec-1.1.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/toml-rs/toml/tree/f72038c2508112dfaaedb227a511f91bf9b2015c
 toml_parser 1.1.5+spec-1.1.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/toml-rs/toml/tree/ceac6e4412420d5a5c19e4f7293ad005cf1a31b2
 toml_writer 1.1.3+spec-1.1.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/toml-rs/toml/tree/f72038c2508112dfaaedb227a511f91bf9b2015c
 tower 0.5.3: MIT
-  Unmodified source: https://github.com/tower-rs/tower/tree/4b0a6b0e688bd177eb2c9c97f5268dd9703c66fc
 tower-http 0.6.11: MIT
-  Unmodified source: https://github.com/tower-rs/tower-http/tree/1d082ef7bdb6d80a2964698804a46c338b4c6a99
 tower-layer 0.3.3: MIT
-  Unmodified source: https://github.com/tower-rs/tower/tree/fec9e559e276ba9609f939d3b0d2e4fa0504de6f
 tower-service 0.3.3: MIT
-  Unmodified source: https://github.com/tower-rs/tower/tree/646804d77eebf072dac180cb5e1256b9ee7e0229
 tracing 0.1.44: MIT
-  Unmodified source: https://github.com/tokio-rs/tracing/tree/2d55f6faf9be83e7e4634129fb96813241aac2b8
 tracing-attributes 0.1.31: MIT
-  Unmodified source: https://github.com/tokio-rs/tracing/tree/55086231ec4aaeffcaab9932e696f40278f06bd1
 tracing-core 0.1.36: MIT
-  Unmodified source: https://github.com/tokio-rs/tracing/tree/10a9e838a35e6ded79d66af246be2ee05417136d
 try-lock 0.2.5: MIT
-  Unmodified source: https://github.com/seanmonstar/try-lock/tree/fd160ecd9105e8afcc43dbea450a0ef6e5128cce
+tungstenite 0.30.0: MIT OR Apache-2.0
 typeid 1.0.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/dtolnay/typeid/tree/b06a3c08a0eaccc7df6091ade1ae4e3fb53609d5
 typenum 1.20.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/paholg/typenum/tree/0db9a0f731981f29266b63586c29fa07e4477b1a
 unicode-casefold 0.2.0: MIT/Apache-2.0
 unicode-ident 1.0.27: (MIT OR Apache-2.0) AND Unicode-3.0
-  Unmodified source: https://github.com/dtolnay/unicode-ident/tree/c1ac3afb721f3cea6527bc2255340a04d0de3ca0
 unicode-normalization 0.1.25: MIT OR Apache-2.0
-  Unmodified source: https://github.com/unicode-rs/unicode-normalization/tree/5a69b3bafb625caccdec7871a42bed0d9a6604d1
 unicode-segmentation 1.13.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/unicode-rs/unicode-segmentation/tree/66a032fd8d667bc47ac5b640b151dff3f5356d07
 untrusted 0.9.0: ISC
-  Unmodified source: https://github.com/briansmith/untrusted/tree/89c8b8415f692d3803d183fc5fbf9ec08a6adcf4
 url 2.5.8: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/rust-url/tree/d6ea13c5f8e7e6e627f6390161b3e185bda5e5ce
 urlpattern 0.6.0: MIT
-  Unmodified source: https://github.com/denoland/rust-urlpattern/tree/e29804d15bdc60797c1c7f715d90480ace0bb451
 utf8_iter 1.0.4: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/hsivonen/utf8_iter/tree/6b604ea2365bd535fb66eb4bfe92a9e00e333090
 uuid 1.28.0: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/uuid-rs/uuid/tree/276c23628a669ca9fca637f3326c21b114e88049
 vcpkg 0.2.15: MIT/Apache-2.0
-  Unmodified source: https://github.com/mcgoo/vcpkg-rs/tree/e7d37e095ef2aa85c80242aa3850d442832b7b54
 version_check 0.9.5: MIT/Apache-2.0
-  Unmodified source: https://github.com/SergioBenitez/version_check/tree/d77ef9f27cc336719b2d839d09ee6635dd22f758
 vswhom 0.1.0: MIT
-  Unmodified source: https://github.com/nabijaczleweli/vswhom.rs/tree/2472981fa9c8670928ff8e165a4651bfc0d1104a
 vswhom-sys 0.1.3: MIT
-  Unmodified source: https://github.com/nabijaczleweli/vswhom-sys.rs/tree/086e3af37e81051057257dfde855ed58a777fb0f
 walkdir 2.5.0: Unlicense/MIT
-  Unmodified source: https://github.com/BurntSushi/walkdir/tree/4f26be4d450910916ea11533b2efc52b9a6483bc
 want 0.3.2: MIT
-  Unmodified source: https://github.com/seanmonstar/want/tree/322291ce5a87c72ecfd83d383d0d7f5245cf72c6
 web-time 1.1.0: MIT OR Apache-2.0
-  Unmodified source: https://github.com/daxpedda/web-time/tree/2d200ded30bbcab66f6a4bfa277ac546685728db
 web_atoms 0.2.6: MIT OR Apache-2.0
-  Unmodified source: https://github.com/servo/html5ever/tree/c1eb09ddba00dd0e7e494c6b7cc068286e658afb
+webpki-roots 0.26.11: CDLA-Permissive-2.0
+webpki-roots 1.0.9: CDLA-Permissive-2.0
 webview2-com 0.39.1: MIT
-  Unmodified source: https://github.com/wravery/webview2-rs/tree/edc2caf886175ccaebe86078c9cfe1ae2a187328
 webview2-com-macros 0.8.1: MIT
-  Unmodified source: https://github.com/wravery/webview2-rs/tree/dffa41a8a46d3f5565eefbff2de57d38d399f158
 webview2-com-sys 0.39.1: MIT
-  Unmodified source: https://github.com/wravery/webview2-rs/tree/edc2caf886175ccaebe86078c9cfe1ae2a187328
 winapi-util 0.1.11: Unlicense OR MIT
-  Unmodified source: https://github.com/BurntSushi/winapi-util/tree/803874c57dc1f10ecd42f7c86d9de72f53818432
 window-vibrancy 0.8.1: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/tauri-plugin-vibrancy/tree/74216857a010454ae4dd19618787f06b656747b3
 windows 0.62.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-collections 0.3.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-core 0.62.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-future 0.3.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-implement 0.60.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-interface 0.59.3: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-link 0.2.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/d468916ac27a36fb8a12bafc1bf5c0ec2fe92238
 windows-numerics 0.3.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-registry 0.6.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-result 0.4.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-strings 0.5.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-sys 0.61.2: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 windows-threading 0.2.1: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/d468916ac27a36fb8a12bafc1bf5c0ec2fe92238
 windows-version 0.1.7: MIT OR Apache-2.0
-  Unmodified source: https://github.com/microsoft/windows-rs/tree/32c3144490c016fe496a0aed769bce60987a2e9d
 winnow 1.0.4: MIT
-  Unmodified source: https://github.com/winnow-rs/winnow/tree/7539ec0fc27144bfdcf9a68b0dbbec48bd0d5bae
 winreg 0.56.0: MIT
-  Unmodified source: https://github.com/gentoo90/winreg-rs/tree/d14c8bd6758810ec679533ac4dc7b0420f598d23
 writeable 0.6.4: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 wry 0.57.0: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/tauri-apps/wry/tree/792d0359ba6501a4fc360ece17de2ae42329a47c
 yoke 0.8.3: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a954ec29392c0225453404cb1f6a77f0ded27089
 yoke-derive 0.8.4: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a59ab860d4bda548e94dfbf992d87fe1f761bc55
+zerocopy 0.8.63: BSD-2-Clause OR Apache-2.0 OR MIT
 zerofrom 0.1.8: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/e9575f7e4b5aeddfeeb87ada5d3e715950e8233e
 zerofrom-derive 0.1.8: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/ce235d80cf7cbd028e8bd59920420e1203b205b3
 zeroize 1.9.1: Apache-2.0 OR MIT
-  Unmodified source: https://github.com/RustCrypto/utils/tree/34a6ebcb9b920ec7ae5809e470fce94fe7c0cb55
 zerotrie 0.2.5: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/a14f2dad852be26bad277ae704abf27a15cbfed1
 zerovec 0.11.8: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/c56bbb5a7b47409759113903764c456f13b418e5
 zerovec-derive 0.11.6: Unicode-3.0
-  Unmodified source: https://github.com/unicode-org/icu4x/tree/898d79c69f37da7b45a15a5714663c9b59b3d928
 zip 4.6.1: MIT
-  Unmodified source: https://github.com/zip-rs/zip2.git/tree/56fa5f6e1f3e29d747e5875867e7a647aa612b8c
 zlib-rs 0.6.8: Zlib
-  Unmodified source: https://github.com/trifectatechfoundation/zlib-rs/tree/0254e07204884bfc902d6ebb68c8b703d0ea49cf
 zmij 1.0.23: MIT
-  Unmodified source: https://github.com/dtolnay/zmij/tree/7b7cc48b58028e8af7be87e94c0c1c8936f1a57c
 zopfli 0.8.4: Apache-2.0
-  Unmodified source: https://github.com/zopfli-rs/zopfli/tree/62df3aebea9f458558984b106f87e980d4077c2f
 @tauri-apps/api 2.12.3: Apache-2.0 OR MIT
 @tauri-apps/plugin-updater 2.13.3: MIT OR Apache-2.0
-NSIS 3.11 installer stubs and compiler notices: licenses/desktop/nsis-3.11/COPYING
-douyinlive-proto activity protobuf definitions: MIT (copyright retained in licenses/desktop/douyinlive-proto/LICENSE-MIT.txt)
-  Source: https://github.com/jwwsjlm/douyinlive-proto/tree/0d661be57c8f80947054b2ef0cd1ac2fdce3cc4b
-  Only referenced activity field definitions are used; the complete upstream project is not bundled.
-
-Bundled unmodified fonts (SIL Open Font License 1.1):
-Douyin Sans Bold and ChillRoundM. Copyright, licenses and source notices:
-licenses/fonts/licenses/. Original file hashes: licenses/fonts/font-manifest.json.
-The project MIT license does not apply to these fonts.
+@tauri-apps/cli 2.12.2: Apache-2.0 OR MIT
+vite 8.3.4: MIT
+Unmodified fonts: Douyin Sans Bold and ChillRoundM, SIL OFL 1.1. Font copyrights/licenses are separate from the project license.
+NSIS and WebView2 retain their own notices. This distribution has no Python, PyO3, V8 or Node runtime.

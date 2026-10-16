@@ -113,7 +113,7 @@ if (new URLSearchParams(location.search).get('scene') === 'mixed') {
     a.last_message_at = i < 8 ? '2026-10-14T16:42:08+08:00' : '';
   });
 }
-const demoRoutes = ['direct', '192.0.2.41:8080', '192.0.2.42:8080', '192.0.2.43:8080', '192.0.2.44:8080'];
+const demoRoutes = ['direct', '192.0.3.01:8080', '192.0.3.02:8080', '192.0.3.03:8080', '192.0.3.04:8080'];
 anchors.forEach((a, i) => { if (a.active) a.proxy = demoRoutes[i % demoRoutes.length]; });
 const proxySnapshot = () => ({ enabled: proxyEnabled, include_direct: proxyIncludeDirect, refresh: previewBatch(), available: 4, assigned: anchors.filter(a => a.proxy).length, checking: 0, failed: 1, total: 5, last_error: '', subscriptions,
   routes: demoRoutes.map((endpoint, i) => ({ route_id: endpoint, endpoint, kind: i ? 'proxy' : 'direct', assigned_tasks: anchors.filter(a => a.proxy === endpoint).length, connecting: i === 1 ? 1 : 0, request_inflight: 0, state: i === 4 ? 'cooling' : 'ready', cooldown_seconds: i === 4 ? 42 : 0 })),
@@ -149,7 +149,7 @@ for (const [i, activity] of [
     content: activity.content, time_str: `16:43:0${i}`, payload: { ...activity, activity_stage: "notice" } });
 }
 const snapshot = () => ({
-  version: "0.2.4",
+  version: "0.3.0",
   anchors: [...anchors],
   archive_anchors: [...new Map(archiveSessions.map(s => [s.anchor_id, {
     anchor_id: s.anchor_id, anchor_name: s.anchor_name, web_rid: s.web_rid,

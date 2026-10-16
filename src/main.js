@@ -236,7 +236,7 @@ function renderPage() {
     p.innerHTML =
       heading("", "设置", "") + updatePanelMarkup(icon) +
       `<section class="panel form-panel appearance-panel"><div class="setting-title"><h2>界面字体</h2></div><label class="font-setting"><select id="ui-font" aria-label="界面字体"><option value="douyin" ${state.font === "douyin" ? "selected" : ""}>抖音美好体 · 默认</option><option value="chill" ${state.font === "chill" ? "selected" : ""}>寒蝉半圆体</option></select><span>直播的每一刻，都清晰可见。0123456789</span></label></section>` +
-      `<div class="two-column"><section class="panel form-panel"><div class="setting-title"><h2>默认 Cookie</h2><span class="badge">${state.settings.cookie_configured ? "已配置" : "未配置"}</span></div><div class="field"><textarea id="default-cookie" rows="5" autocomplete="off" spellcheck="false" placeholder="可选，粘贴有权限使用的单行 Cookie"></textarea><small>加密保存在本机。主播详情内可单独设置，重启监控后生效。</small></div><div class="toolbar-group"><button class="primary" data-action="save-cookie">保存</button><button class="quiet danger" data-action="clear-cookie">清除</button></div></section><div><section class="panel form-panel setting-block"><div class="setting-title"><h2>本地数据</h2></div><div class="kv"><span>消息归档</span><strong>按主播 / 场次保存</strong></div><div class="kv"><span>运行日志</span><strong>独立存储</strong></div><button data-action="open-data" style="margin-top:16px">${icon("folder")}打开数据目录</button></section><section class="panel form-panel"><div class="setting-title"><h2>采集进程</h2></div><div id="runtime-metrics"></div></section></div></div>`;
+      `<div class="two-column"><section class="panel form-panel setting-block"><div class="setting-title"><h2>本地数据</h2></div><div class="kv"><span>消息归档</span><strong>按主播 / 场次保存</strong></div><div class="kv"><span>运行日志</span><strong>独立存储</strong></div><button data-action="open-data" style="margin-top:16px">${icon("folder")}打开数据目录</button></section><section class="panel form-panel"><div class="setting-title"><h2>原生采集</h2></div><div id="runtime-metrics"></div></section></div>`;
     renderRuntime();
   }
 }
@@ -716,7 +716,7 @@ function showDetail(rid) {
       )
       .join(
         "",
-      )}<div class="kv"><span>代理地址</span><strong data-detail-field="代理地址">${esc(a.proxy || "未分配")}</strong></div></details><div class="pc-support-control"><strong>电脑端兼容性</strong><small>${a.pc_support_source === "detected" ? "平台已明确返回电脑端不支持提示。" : "在浏览器确认该提示后可手动标记；标记不会改变消息连接。"}</small><button class="small" data-action="set-pc-unsupported" data-rid="${esc(rid)}">${icon("display")}${pcUnsupported(a) ? "清除非 PC 支持标记" : "标记为非 PC 支持"}</button></div><div class="field"><label for="rename-value">主播显示名称</label><input id="rename-value" value="${esc(a.name)}"><button class="small" data-action="rename" data-rid="${esc(rid)}">保存名称</button></div><details class="connection-details"><summary>独立登录凭据</summary><div class="field"><label for="room-cookie">独立 Cookie <span class="badge">${a.own_cookie_configured ? "已配置" : a.cookie_configured ? "使用默认凭据" : "未配置"}</span></label><textarea id="room-cookie" autocomplete="off" spellcheck="false" placeholder="可选，优先于默认 Cookie"></textarea><small>仅供当前直播间使用，加密保存在本机。保存后重启该任务生效。</small><div class="toolbar-group"><button class="small" data-action="save-room-cookie" data-rid="${esc(rid)}">保存</button><button class="small quiet danger" data-action="clear-room-cookie" data-rid="${esc(rid)}">清除</button></div></div></details>`,
+      )}<div class="kv"><span>代理地址</span><strong data-detail-field="代理地址">${esc(a.proxy || "未分配")}</strong></div></details><div class="pc-support-control"><strong>电脑端兼容性</strong><small>${a.pc_support_source === "detected" ? "平台已明确返回电脑端不支持提示。" : "在浏览器确认该提示后可手动标记；标记不会改变消息连接。"}</small><button class="small" data-action="set-pc-unsupported" data-rid="${esc(rid)}">${icon("display")}${pcUnsupported(a) ? "清除非 PC 支持标记" : "标记为非 PC 支持"}</button></div><div class="field"><label for="rename-value">主播显示名称</label><input id="rename-value" value="${esc(a.name)}"><button class="small" data-action="rename" data-rid="${esc(rid)}">保存名称</button></div>`,
     `<button class="danger quiet" data-action="remove-one" data-rid="${esc(rid)}">移除任务</button><button data-action="open-live" data-rid="${esc(rid)}">打开直播间${icon("external")}</button><button id="detail-monitor-toggle" class="${active(a) ? "detail-stop" : "primary"}" data-action="${active(a) ? "stop-one" : "start-one"}" data-rid="${esc(rid)}">${icon(active(a) ? "stop" : "play")}${active(a) ? "停止监控" : "开始监控"}</button>`,
     false,
   );
@@ -1087,29 +1087,6 @@ async function action(el) {
         { job_id: el.dataset.job },
         "正在取消导出",
       );
-    case "save-cookie":
-    case "save-room-cookie": {
-      const input = document.querySelector(
-          a === "save-cookie" ? "#default-cookie" : "#room-cookie",
-        ),
-        cookie = input.value.trim();
-      if (!cookie) throw new Error("请输入 Cookie；如需删除，请使用清除按钮");
-      await request(
-        "set_cookie",
-        { ...(rid ? { rid } : {}), cookie },
-        "凭据已加密保存，重启相应任务后生效",
-      );
-      input.value = "";
-      await init();
-      if (rid) showDetail(rid);
-      break;
-    }
-    case "clear-cookie":
-    case "clear-room-cookie":
-      await request("clear_cookie", rid ? { rid } : {}, "凭据已清除");
-      await init();
-      if (rid) showDetail(rid);
-      break;
     case "open-data":
       if (state.preview) return toast("界面演示：正式应用会打开本地数据目录");
       return invoke("open_data_folder");
@@ -1132,10 +1109,6 @@ document.addEventListener("click", async (e) => {
     "remove-selected",
     "rename",
     "set-pc-unsupported",
-    "save-cookie",
-    "save-room-cookie",
-    "clear-cookie",
-    "clear-room-cookie",
     "preview-proxy",
     "commit-proxy",
     "remove-proxy",
@@ -1263,6 +1236,7 @@ async function boot() {
       const r = await invoke("window_state");
       applyWindowState(r);
       await listen("window-state", (e) => applyWindowState(e.payload));
+      await listen("backend-close-failed", (e) => toast(String(e.payload), true));
     } catch (_) {}
   }
   await init();

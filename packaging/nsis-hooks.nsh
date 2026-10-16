@@ -20,3 +20,32 @@ qingkan_safe_install:
   Pop $1
   Pop $0
 !macroend
+
+; Tauri /UPDATE preserves files not listed by the new installer. Remove only
+; the recognized obsolete bundled engine inside this installation directory.
+; Persistent config/databases live outside this directory and are untouched.
+!macro NSIS_HOOK_POSTINSTALL
+  IfFileExists "$INSTDIR\engine\DouyinMonitorEngine.exe" 0 qingkan_engine_done
+  Push $0
+  Push $1
+  GetFullPathName $0 "$INSTDIR\engine"
+  GetFullPathName $1 "$INSTDIR"
+  StrCmp $0 $1 qingkan_engine_unsafe
+  ; Never recursively traverse an engine directory redirected by a junction.
+  System::Call 'kernel32::GetFileAttributesW(w "$INSTDIR\engine") i.r0'
+  IntOp $0 $0 & 0x400
+  IntCmp $0 0 qingkan_engine_remove qingkan_engine_unsafe qingkan_engine_unsafe
+qingkan_engine_remove:
+  RMDir /r "$INSTDIR\engine"
+  IfFileExists "$INSTDIR\engine\DouyinMonitorEngine.exe" qingkan_engine_unsafe
+  Pop $1
+  Pop $0
+  Goto qingkan_engine_done
+qingkan_engine_unsafe:
+  Pop $1
+  Pop $0
+  MessageBox MB_OK|MB_ICONSTOP "旧版采集运行文件未能安全清理，请关闭旧程序后重新安装。聊天归档不受影响。" /SD IDOK
+  SetErrorLevel 2
+  Abort
+qingkan_engine_done:
+!macroend

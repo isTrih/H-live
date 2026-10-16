@@ -1,0 +1,19 @@
+[package]
+name = "qingkan-signature-check"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+
+[dependencies]
+base64 = "=0.22.1"
+minisign-verify = "=0.3.0"
+serde_json = "=1.0.154"
+sha2 = "=0.10.9"
+
+[profile.release]
+opt-level = 2
+lto = false
+strip = true
+
+[workspace]

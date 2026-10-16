@@ -1,7 +1,6 @@
 //! Qingkan desktop composition. Domain processing lives in qingkan-core.
 mod backend;
 mod desktop;
-mod engine;
 mod paths;
 mod update_policy;
 mod url_policy;
@@ -16,7 +15,7 @@ pub fn run() {
         let Some(report_path) = arguments.get(2) else {
             std::process::exit(2)
         };
-        let result = engine::offline_self_test();
+        let result = h_live_runtime::offline_self_test();
         let passed = result.is_ok();
         let report = match result {
             Ok(details) => {
@@ -68,8 +67,7 @@ pub fn run() {
                 let app = window.app_handle().clone();
                 let backend = Arc::clone(&close_backend);
                 tauri::async_runtime::spawn_blocking(move || {
-                    backend.shutdown();
-                    app.exit(0);
+                    if backend.shutdown().is_ok() { app.exit(0); } else if let Some(window)=app.get_webview_window("main") { let _=window.show(); let _=window.emit("backend-close-failed", "后台尚未确认退出，请等待归档完成后重试"); }
                 });
             }
         })

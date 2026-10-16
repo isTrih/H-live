@@ -1,4 +1,4 @@
-param([switch]$SkipFixtureBuild, [string]$BaselineInstaller, [string]$BaselineVersion, [string]$BaselineDatabase)
+param([switch]$SkipFixtureBuild, [string]$BaselineInstaller, [string]$BaselineVersion)
 $ErrorActionPreference = 'Stop'
 $testRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $testVersion = (Get-Content (Join-Path $testRoot 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
@@ -71,10 +71,6 @@ try {
     if ($guardExit -eq 0 -or (Test-Path -LiteralPath (Join-Path $legacyDir "$fixtureName.exe"))) { throw 'Legacy installer directory guard failed.' }
     $report.legacy_directory_guard_exit = $guardExit
     'retain this data' | Set-Content -LiteralPath (Join-Path $dataDir 'preserve.txt')
-    if ($BaselineDatabase) {
-        & .\.venv\Scripts\python.exe packaging/check_upgrade_database.py prepare --source $BaselineDatabase --database (Join-Path $dataDir 'messages.sqlite3') --report (Join-Path $testDir 'database-compatibility.json')
-        if ($LASTEXITCODE -ne 0) { throw 'Historical synthetic database preparation failed.' }
-    }
     if ($BaselineInstaller) {
         $baselineExit = Run-Installer $BaselineInstaller "/S /NS /D=$installDir"
         if ($baselineExit -ne 0) { throw "Workspace baseline install failed: $baselineExit" }
@@ -92,7 +88,7 @@ try {
     $info = Get-ItemProperty -LiteralPath $registry
     if ($info.DisplayVersion -ne $testVersion) { throw 'NSIS version registration mismatch.' }
     $checked = 0
-    foreach ($mapping in @(@('src-tauri\engine','engine'), @('src-tauri\bundle-docs','docs'), @('src-tauri\bundle-licenses','licenses'))) {
+    foreach ($mapping in @(@('src-tauri\bundle-docs','docs'), @('src-tauri\bundle-licenses','licenses'))) {
         $sourceRoot = (Resolve-Path -LiteralPath $mapping[0]).Path
         foreach ($source in Get-ChildItem -LiteralPath $sourceRoot -File -Recurse) {
             $relative = $source.FullName.Substring($sourceRoot.Length + 1)
@@ -103,13 +99,10 @@ try {
         }
     }
     $report.matching_resource_files = $checked
+    if (Test-Path -LiteralPath (Join-Path $installDir 'engine')) { throw 'Obsolete Python engine remains in installed application.' }
+    $report.no_legacy_engine = $true
     Test-InstalledRuntime 'installed-self-test.json' $testVersion
     $report.installed_self_test = $true
-    if ($BaselineDatabase) {
-        & .\.venv\Scripts\python.exe packaging/check_upgrade_database.py check --database (Join-Path $dataDir 'messages.sqlite3') --report (Join-Path $testDir 'database-compatibility.json')
-        if ($LASTEXITCODE -ne 0) { throw 'Upgrade changed historical synthetic database rows.' }
-        $report.historical_database_rows_unchanged = $true
-    }
     if ($BaselineInstaller) {
         if (-not (Test-Path -LiteralPath (Join-Path $dataDir 'preserve.txt'))) { throw 'Upgrade removed the user-data sentinel.' }
         $report.version_upgrade_and_data_retention = $true

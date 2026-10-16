@@ -1,4 +1,4 @@
-//! Bounded Douyin wire decoding. Tags come from the checked-in douyin.proto.
+//! Bounded Douyin wire decoding. Tags come from the docs/protocol/douyin.proto.
 //!
 //! Only fields used by the collector are materialized. Unknown message methods
 //! and unused fields are ignored; IDs are strings before crossing the FFI/JSON

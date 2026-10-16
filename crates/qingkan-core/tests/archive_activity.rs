@@ -202,19 +202,29 @@ fn concurrent_lottery_notifications_commit_exactly_one_row() {
     let dir = tempfile::tempdir().unwrap();
     let store = ArchiveStore::open(dir.path(), ArchiveOptions::default()).unwrap();
     let inserted = std::thread::scope(|scope| {
-        let handles:Vec<_> = (0..32).map(|i| {
-            let store = &store;
-            scope.spawn(move || {
-                let mut r = activity(&format!("concurrent-{i}"));
-                r.payload["activity_details"] = json!({"draw_at":1790784300});
-                store.record_message(r,String::new(),None).unwrap()
+        let handles: Vec<_> = (0..32)
+            .map(|i| {
+                let store = &store;
+                scope.spawn(move || {
+                    let mut r = activity(&format!("concurrent-{i}"));
+                    r.payload["activity_details"] = json!({"draw_at":1790784300});
+                    store.record_message(r, String::new(), None).unwrap()
+                })
             })
-        }).collect();
-        handles.into_iter().map(|h| h.join().unwrap()).filter(|v| *v).count()
+            .collect();
+        handles
+            .into_iter()
+            .map(|h| h.join().unwrap())
+            .filter(|v| *v)
+            .count()
     });
-    assert_eq!(inserted,1);
+    assert_eq!(inserted, 1);
     let c = Connection::open(store.path()).unwrap();
-    assert_eq!(c.query_row("SELECT COUNT(*) FROM messages",[],|r|r.get::<_,i64>(0)).unwrap(),1);
+    assert_eq!(
+        c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
     assert!(store.close(Duration::from_secs(2)));
 }
 
@@ -232,14 +242,34 @@ fn failed_historical_merge_rolls_back_rows_details_and_index() {
         INSERT INTO messages(anchor_id,anchor_name,web_rid,session_id,sender_id,sender_name,message_type,content,message_time,received_at,time_source,message_id,message_time_epoch,received_at_epoch,payload_json)
         SELECT anchor_id,anchor_name,web_rid,session_id,sender_id,sender_name,message_type,content,message_time,received_at,time_source,'duplicate',message_time_epoch,received_at_epoch,json_set(payload_json,'$.activity_details.prize_name','应回滚的详情') FROM messages;
         CREATE TRIGGER fail_lottery_merge BEFORE DELETE ON messages BEGIN SELECT RAISE(ABORT,'synthetic failure'); END;").unwrap();
-    let before:Vec<(i64,String)> = c.prepare("SELECT id,payload_json FROM messages ORDER BY id").unwrap().query_map([],|r|Ok((r.get(0)?,r.get(1)?))).unwrap().collect::<std::result::Result<_,_>>().unwrap();
+    let before: Vec<(i64, String)> = c
+        .prepare("SELECT id,payload_json FROM messages ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<std::result::Result<_, _>>()
+        .unwrap();
     assert!(ArchiveStore::open(dir.path(), ArchiveOptions::default()).is_err());
-    let after:Vec<(i64,String)> = c.prepare("SELECT id,payload_json FROM messages ORDER BY id").unwrap().query_map([],|r|Ok((r.get(0)?,r.get(1)?))).unwrap().collect::<std::result::Result<_,_>>().unwrap();
-    assert_eq!(before,after);
-    assert!(!c.prepare("SELECT 1 FROM sqlite_schema WHERE name='messages_lottery_draw'").unwrap().exists([]).unwrap());
+    let after: Vec<(i64, String)> = c
+        .prepare("SELECT id,payload_json FROM messages ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<std::result::Result<_, _>>()
+        .unwrap();
+    assert_eq!(before, after);
+    assert!(!c
+        .prepare("SELECT 1 FROM sqlite_schema WHERE name='messages_lottery_draw'")
+        .unwrap()
+        .exists([])
+        .unwrap());
     c.execute_batch("DROP TRIGGER fail_lottery_merge").unwrap();
     let store = ArchiveStore::open(dir.path(), ArchiveOptions::default()).unwrap();
-    assert_eq!(c.query_row("SELECT COUNT(*) FROM messages",[],|r|r.get::<_,i64>(0)).unwrap(),1);
+    assert_eq!(
+        c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
     assert!(store.close(Duration::from_secs(2)));
 }
 
@@ -249,17 +279,42 @@ fn merged_lottery_summary_stays_exportable_with_many_long_conditions() {
     let store = ArchiveStore::open(dir.path(), ArchiveOptions::default()).unwrap();
     let mut first = activity("short");
     first.payload["activity_details"] = json!({"draw_at":1790784300});
-    store.record_message(first.clone(),String::new(),None).unwrap();
+    store
+        .record_message(first.clone(), String::new(), None)
+        .unwrap();
     first.message_id = "long".into();
-    first.payload["activity_details"]["conditions"] = json!((0..100).map(|i| json!({"content":format!("{i}{}","😀".repeat(1024))})).collect::<Vec<_>>());
-    assert!(!store.record_message(first,String::new(),None).unwrap());
+    first.payload["activity_details"]["conditions"] = json!((0..100)
+        .map(|i| json!({"content":format!("{i}{}","😀".repeat(1024))}))
+        .collect::<Vec<_>>());
+    assert!(!store.record_message(first, String::new(), None).unwrap());
     let c = Connection::open(store.path()).unwrap();
-    let (content,payload):(String,String)=c.query_row("SELECT content,payload_json FROM messages",[],|r|Ok((r.get(0)?,r.get(1)?))).unwrap();
-    assert!(content.encode_utf16().count()<=32000);
-    let p:Value=serde_json::from_str(&payload).unwrap();
-    assert_eq!(p["activity_summary_truncated"],true);
-    assert_eq!(p["activity_details"]["conditions"].as_array().unwrap().len(),100);
-    export_month(dir.path(),ExportOptions{anchor_ids:vec!["11".into()],month:"2026-10".into(),output_path:dir.path().join("long.xlsx"),format:"xlsx".into(),types:vec!["activity".into()]},&CancelToken::default()).unwrap();
+    let (content, payload): (String, String) = c
+        .query_row("SELECT content,payload_json FROM messages", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert!(content.encode_utf16().count() <= 32000);
+    let p: Value = serde_json::from_str(&payload).unwrap();
+    assert_eq!(p["activity_summary_truncated"], true);
+    assert_eq!(
+        p["activity_details"]["conditions"]
+            .as_array()
+            .unwrap()
+            .len(),
+        100
+    );
+    export_month(
+        dir.path(),
+        ExportOptions {
+            anchor_ids: vec!["11".into()],
+            month: "2026-10".into(),
+            output_path: dir.path().join("long.xlsx"),
+            format: "xlsx".into(),
+            types: vec!["activity".into()],
+        },
+        &CancelToken::default(),
+    )
+    .unwrap();
     assert!(store.close(Duration::from_secs(2)));
 }
 
