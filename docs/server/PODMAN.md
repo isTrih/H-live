@@ -14,6 +14,7 @@ H-live Server 使用一个 Rust 进程，同时提供网页、Salvo API、采集
 
 ```sh
 podman load -i h-live-server-0.1.0-linux-amd64.docker.tar.gz
+podman tag docker.io/library/h-live-server:0.1.0 localhost/h-live-server:0.1.0
 tar -xzf h-live-server-0.1.0-podman.tar.gz
 bash packaging/server/podman/install.sh
 systemctl --user start h-live.service

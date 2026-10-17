@@ -12,7 +12,7 @@ version=$(podman version --format '{{.Client.Version}}')
 [[ $(podman info --format '{{.Host.Security.Rootless}}') == true ]] || die 'Rootless Podman required.'
 systemctl --user show-environment >/dev/null || die 'A systemd user session is required.'
 [[ -z ${XDG_CONFIG_HOME:-} || $XDG_CONFIG_HOME == "$HOME/.config" ]] || die 'This kit requires the standard ~/.config directory.'
-podman image exists localhost/h-live-server:0.1.0 || die 'Load the verified server image with podman load first.'
+podman image exists localhost/h-live-server:0.1.0 || die 'Load the verified image, then tag docker.io/library/h-live-server:0.1.0 as localhost/h-live-server:0.1.0 (see PODMAN.md).'
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 data_root="$HOME/.local/share/h-live"
 config_root="$HOME/.config/h-live"
