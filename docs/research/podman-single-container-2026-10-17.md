@@ -60,4 +60,21 @@ podman load --input h-live-image.tar.gz
 
 这是镜像 archive，不能以 `podman import` 替代；`import` 面向 `export` 的容器根文件系统。必须以实际运行 Quadlet 的同一个非 root 用户导入，确保进入其 rootless image storage，加载后核对镜像架构与确切 tag，Quadlet `Image=` 匹配本地 tag、`Pull=never` 才不会再尝试远端拉取。压缩包与展开层都消耗宿主空间；4.9.3 load 默认临时目录 `/var/tmp`，必要时显式配置宿主 TMPDIR。这与容器内 `/tmp` tmpfs 无关。[官方 load 手册](https://github.com/containers/podman/blob/v4.9.3/docs/source/markdown/podman-load.1.md)
 
-以上是官方支持范围与源代码结论，尚未构成 Ubuntu 24.04 实机验收。验收应实际检查 generator 合并结果、0600 key 读取、数据写入、health-stop 自动重启、手动 stop 不重启、SIGTERM 归档确认与超过停机预算时的行为。
+以上是资料核对阶段的官方支持范围与源代码结论。后续 Ubuntu 24.04 实机结果另见 [Podman 验证记录](../engineering/SERVER_PODMAN_VALIDATION.md)，未覆盖的故障场景也在该记录中列明。
+
+## CI 实测：手动 dry-run 成功，但 user unit not-found
+
+后续 Ubuntu 24.04 GitHub runner 测试出现：新建 `hlive-ci` 用户、启用 linger、启动其 user manager 后，rootless image load 成功；Quadlet 带显式 `QUADLET_UNIT_DIRS` 的 dry-run 能输出完整 service，但 daemon-reload 后 `LoadState=not-found`。
+
+**此次诊断证据指向 CI 环境污染，不是 Quadlet 语法或打包缺失**：runner 上实际 user-generator 存在；user manager 的 HOME 为 `/home/hlive-ci`，但 XDG_CONFIG_HOME 仍为 `/home/runner/.config`，journal 明确记录 Quadlet 访问后一路径被拒绝。DBus 子进程还继承了原 runner UID 的 XDG_RUNTIME_DIR。只有实际日志与环境组合才足以作此判断。
+
+官方来源与诊断推论：
+
+- Ubuntu Noble [podman 文件列表](https://packages.ubuntu.com/noble/amd64/podman/filelist) 包含 `/lib/systemd/user-generators/podman-user-generator`、system-generator 与 `/usr/libexec/podman/quadlet`；[4.9.3 Makefile](https://github.com/containers/podman/blob/v4.9.3/Makefile) 将 user-generator 设为指向 quadlet 的链接。仍需核对具体机器上的 `readlink -e`、执行权限与更高优先级目录是否屏蔽该 generator。
+- [4.9.3 main.go](https://github.com/containers/podman/blob/v4.9.3/cmd/quadlet/main.go) 用执行文件 basename 包含 `user` 判断用户模式，再以 `os.UserConfigDir()` 发现 `containers/systemd`；有 QUADLET_UNIT_DIRS 时则直接走覆盖路径。[Go UserConfigDir](https://github.com/golang/go/blob/go1.20.14/src/os/file.go) 在 Linux 优先 XDG_CONFIG_HOME，缺省才用 HOME/.config。因此显式目录 dry-run 成功，**不能证明 manager 的默认目录发现正确**。
+- systemd v255 [manager.c](https://github.com/systemd/systemd/blob/v255/src/core/manager.c) 在 user manager 初始化时将自身 `environ` 复制到 `transient_environment`；`build_generator_environment` 从该 transient 环境构建 generator 环境。另一方面 [dbus-manager.c](https://github.com/systemd/systemd/blob/v255/src/core/dbus-manager.c) 的 SetEnvironment / UnsetEnvironment 修改的是 `client_environment`。正常服务的 effective environment 合并两者，但 generator 只取 transient。因此 **`systemctl --user set-environment` 后 daemon-reload 并不足以修正本例 generator 的污染路径**；`show-environment` 显示新值也不能单独证明它已生效于 generator。
+- systemd v255 [path-lookup.c](https://github.com/systemd/systemd/blob/v255/src/basic/path-lookup.c) 的 user generator 目录包括 `/run/systemd/user-generators`、`/etc/systemd/user-generators`、`/usr/local/lib/systemd/user-generators` 与发行版目录；SYSTEMD_GENERATOR_PATH 可改写发现范围。[generator 手册](https://github.com/systemd/systemd/blob/v255/man/systemd.generator.xml) 规定高优先级同名文件 / `/dev/null` 链接可屏蔽 generator。故通用排查应区分「没执行 generator」「读错源目录」「生成失败」「生成结果不在 manager UnitPath」，不能把它们全归因于同一故障。
+
+曾尝试仅在 CI 为第二用户的 `user@UID.service` 包装启动环境，但实测 manager 启动超时，**没有构成成功修复，最终方案已移除该实验**。这里不推测未确认的超时原因，也不建议生产用户照搬。systemd 原始配置依据：[user@ unit](https://github.com/systemd/systemd/blob/v255/units/user@.service.in)、[exec 环境顺序](https://github.com/systemd/systemd/blob/v255/man/systemd.exec.xml)。
+
+最终 CI 直接使用临时 VM 原有的非 root runner 用户及匹配的 systemd 会话，开始前确认应用目录和 unit 均不存在，所有 Podman 操作不加 sudo。无需修改 PAM、user@ ExecStart 或宿主安全策略，即可正常 daemon-reload 和加载 Quadlet。**[CI 39009677731](https://github.com/isTrih/H-live/actions/runs/39009677731) 已通过**：Podman 4.9.3，source `2d3a9e4119c7828e1cbb959b9953b153e7a6f008`，实测一个运行容器、UID 10001、只读挂载、鉴权、重复初始化不改密钥、缺密钥拒绝重建、停止归档、重启持久化及故障 kill 后自动恢复。完整范围和未测项见验证记录；生产安装脚本不包含上述 CI 环境实验。
