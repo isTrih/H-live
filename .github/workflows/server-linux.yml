@@ -59,7 +59,8 @@ jobs:
         run: |
           mkdir -p server-release
           docker run --rm -v "$PWD:/src" -w /src rust:1.99.1-bookworm \
-            cargo run --manifest-path crates/Cargo.toml --locked -p h-live-runtime --features test-support --example benchmark -- /src/server-release/offline-capacity.json
+            cargo run --manifest-path crates/Cargo.toml --locked -p h-live-runtime --features test-support --example benchmark -- /tmp/offline-capacity.json > server-release/offline-capacity.json
+          test -r server-release/offline-capacity.json
       - name: Package Docker image and deployment kit
         run: |
           mkdir -p server-release
