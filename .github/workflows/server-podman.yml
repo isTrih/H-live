@@ -44,7 +44,13 @@ jobs:
             podman version --format "{{.Client.Version}}"
             podman load -i /tmp/h-live-image.tar.gz
             podman tag docker.io/library/h-live-server:0.1.0 localhost/h-live-server:0.1.0
-            bash packaging/server/podman/smoke.sh
+            if ! bash packaging/server/podman/smoke.sh; then
+              systemctl --user show-environment | grep -E "^(HOME|XDG_CONFIG_HOME|SYSTEMD_GENERATOR_PATH)=" || true
+              ls -l /usr/lib/systemd/user-generators/
+              systemctl --user show --property=UnitPath
+              journalctl --user -b --no-pager -n 60 || true
+              exit 1
+            fi
           '
           printf '{"commit":"%s","image_sha256":"02181250d1fda167368df810fb629d54453d33fd5f15b0418904c2044300cd05","platform":"ubuntu-24.04-linux-amd64","rootless":true,"quadlet_systemd":true,"container_count":1,"result":"passed","scope":"synthetic data; no real room connections"}\n' "$GITHUB_SHA" > podman-validation.json
       - name: Package standalone deployment kit
