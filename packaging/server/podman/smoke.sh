@@ -2,7 +2,11 @@
 # Ephemeral Linux CI user only. Never consumes real rooms, keys or user data.
 set -euo pipefail
 [[ $(id -u) != 0 && ${H_LIVE_EPHEMERAL_CI:-} == 1 ]] || exit 1
-cleanup() { systemctl --user stop h-live.service || true; }
+cleanup() {
+  result=$?
+  if ((result != 0)); then journalctl --user -u h-live.service --no-pager -n 80 >&2 || true; fi
+  systemctl --user stop h-live.service || true
+}
 trap cleanup EXIT
 bash packaging/server/podman/install.sh
 before=$(sha256sum "$HOME/.local/share/h-live/secrets/"*)
@@ -26,7 +30,7 @@ podman exec h-live sh -c '! touch /opt/h-live/write-test && ! touch /run/h-live-
 token=$(cat "$HOME/.local/share/h-live/secrets/admin-token")
 request() { printf 'header = "Authorization: Bearer %s"\n' "$token" | curl -fsS -K - -H 'content-type: application/json' -X POST -d "$2" "http://localhost:8080/api/v1/$1"; }
 request state '{}' > /tmp/hlive-initial.json
-node -e 'const s=require("/tmp/hlive-initial.json");if(s.anchors.length!==0)process.exit(1)'
+jq -e '.anchors | length == 0' /tmp/hlive-initial.json > /dev/null
 request anchors/import '{"values":"1"}' > /dev/null
 systemctl --user stop h-live.service
 journalctl --user -u h-live.service --no-pager | grep -q 'All monitoring workers stopped and archives flushed'
@@ -34,7 +38,7 @@ journalctl --user -u h-live.service --no-pager | grep -q 'All monitoring workers
 systemctl --user start h-live.service
 ready
 request state '{}' > /tmp/hlive-restored.json
-node -e 'const s=require("/tmp/hlive-restored.json");if(s.anchors.length!==1||s.anchors[0].active)process.exit(1)'
+jq -e '(.anchors | length == 1) and (.anchors[0].active == false)' /tmp/hlive-restored.json > /dev/null
 # Fail-closed recovery: never regenerate a lost key over an existing archive.
 mv "$HOME/.local/share/h-live/secrets/master.key" "$HOME/master.key.saved"
 if bash packaging/server/podman/install.sh > /dev/null 2>&1; then exit 1; fi
@@ -51,6 +55,6 @@ done
 [[ -n $new_id && $new_id != "$old_id" ]]
 ready
 request state '{}' > /tmp/hlive-recovered.json
-node -e 'const s=require("/tmp/hlive-recovered.json");if(s.anchors.length!==1||s.anchors[0].active)process.exit(1)'
+jq -e '(.anchors | length == 1) and (.anchors[0].active == false)' /tmp/hlive-recovered.json > /dev/null
 unset token
 printf '%s\n' 'PASS: rootless Quadlet, one container, uid10001, read-only mounts, auth, idempotent keys, lost-key refusal, persisted data, SIGTERM flush, automatic restart'

@@ -61,7 +61,7 @@ systemctl --user restart h-live.service
 systemctl --user stop h-live.service
 ```
 
-systemd 自动重启异常退出的容器；健康检查持续失败时先停止容器，再由 systemd 重启。`Restart=always` 也覆盖健康停止的正常退出码，但手动 `systemctl --user stop` 会保持停止。正常停止使用 SIGTERM，最多等待 180 秒完成归档；单独的 systemd drop-in 显式指定 `podman stop`，随后保留 Quadlet 的清理步骤。200 秒 systemd 停止超时为清理留出余量。日志归 journald 管理，宿主机应配置保留期限/磁盘限额。
+systemd 自动重启异常退出的容器；健康检查持续失败时先停止容器，再由 systemd 重启。`Restart=always` 也覆盖健康停止的正常退出码，但手动 `systemctl --user stop` 会保持停止。正常停止使用 SIGTERM，最多等待 180 秒完成归档；单独的 systemd drop-in 显式指定 `podman stop`，随后保留 Quadlet 的清理步骤。240 秒 systemd 停止超时为清理留出余量。日志归 journald 管理，宿主机应配置保留期限/磁盘限额。
 
 网页添加并开始监控的任务在服务重启后恢复，手动停止的任务不会自行启动。健康检查只说明控制服务就绪，不保证抖音下发消息。仍不使用抖音登录 Cookie、不新增礼物记录。
 

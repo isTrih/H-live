@@ -32,7 +32,7 @@ HealthOnFailure=stop
 Restart=always
 RestartSec=5s
 TimeoutStartSec=180
-TimeoutStopSec=200
+TimeoutStopSec=240
 UMask=0077
 
 [Install]
