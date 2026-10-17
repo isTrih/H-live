@@ -5,9 +5,24 @@ use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 pub type Result<T> = std::result::Result<T, String>;
+/// Credential protection is supplied by the host; desktop keeps user DPAPI.
+pub trait SecretProtector: Send + Sync {
+    fn protect(&self, input: &[u8]) -> Result<Vec<u8>>;
+    fn unprotect(&self, input: &[u8]) -> Result<Vec<u8>>;
+}
+pub struct SystemProtector;
+impl SecretProtector for SystemProtector {
+    fn protect(&self, input: &[u8]) -> Result<Vec<u8>> {
+        crypt(input, false)
+    }
+    fn unprotect(&self, input: &[u8]) -> Result<Vec<u8>> {
+        crypt(input, true)
+    }
+}
 pub fn now() -> String {
     chrono::Utc::now()
         .with_timezone(&qingkan_core::archive::shanghai())
@@ -109,9 +124,16 @@ fn crypt(_: &[u8], _: bool) -> Result<Vec<u8>> {
 pub struct Settings {
     pub value: Value,
     pub directory: PathBuf,
+    protector: Arc<dyn SecretProtector>,
 }
 impl Settings {
     pub fn load(directory: PathBuf) -> Result<Self> {
+        Self::load_with_protector(directory, Arc::new(SystemProtector))
+    }
+    pub fn load_with_protector(
+        directory: PathBuf,
+        protector: Arc<dyn SecretProtector>,
+    ) -> Result<Self> {
         fs::create_dir_all(&directory).map_err(|_| "无法创建数据目录")?;
         let path = directory.join("config.json");
         let mut value = if path.exists() {
@@ -139,14 +161,18 @@ impl Settings {
             let encrypted = format!("{key}_encrypted");
             if let Some(s) = value[&encrypted].as_str() {
                 let raw = STANDARD.decode(s).map_err(|_| "代理配置编码无效")?;
-                let clear = crypt(&raw, true)?;
+                let clear = protector.unprotect(&raw)?;
                 value[key] = serde_json::from_slice(&clear).map_err(|_| "代理配置格式无效")?;
             } else if !value[key].is_array() {
                 value[key] = json!([])
             }
         }
         // Legacy login fields are opaque: never decrypt, expose or send them.
-        Ok(Self { value, directory })
+        Ok(Self {
+            value,
+            directory,
+            protector,
+        })
     }
     pub fn save(&self) -> Result<()> {
         self.persist(&self.value)
@@ -169,7 +195,7 @@ impl Settings {
             disk.as_object_mut().unwrap().remove(&encrypted);
             if list.as_array().is_some_and(|v| !v.is_empty()) {
                 let encoded = serde_json::to_vec(&list).map_err(|_| "代理配置无效")?;
-                disk[encrypted] = json!(STANDARD.encode(crypt(&encoded, false)?));
+                disk[encrypted] = json!(STANDARD.encode(self.protector.protect(&encoded)?));
             }
         }
         atomic(

@@ -11,7 +11,7 @@ try {
     }
     if ($Suite -in @('all','rust')) {
         . ./scripts/rust-env.ps1
-        & cargo test --manifest-path crates/Cargo.toml --target-dir src-tauri/target --locked --offline -p qingkan-core -p h-live-runtime --features h-live-runtime/test-support -- --test-threads=4
+        & cargo test --manifest-path crates/Cargo.toml --target-dir src-tauri/target --locked --offline --workspace --features h-live-server/test-support -- --test-threads=4
         if ($LASTEXITCODE -ne 0) { throw 'Rust runtime/core tests failed' }
         & cargo test --manifest-path src-tauri/Cargo.toml --locked --offline
         if ($LASTEXITCODE -ne 0) { throw 'Desktop tests failed' }

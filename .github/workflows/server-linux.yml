@@ -1,0 +1,54 @@
+name: Server Linux
+on:
+  push:
+    branches: [main]
+    tags: ["server-v*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: server-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - name: Source policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -Ei '\.(py|pyw|pyi|pyx|pxd|pxi|pyc|pyo|pyd|ipynb)$|(^|/)(requirements[^/]*\.txt|Pipfile(\.lock)?|poetry\.lock|pyproject\.toml|uv\.lock)$'; then exit 1; fi
+          if git grep -nEI '^#!.*python|^```(python|py)([[:space:]]|$)' -- ':!scripts/check_no_python.ps1'; then exit 1; fi
+      - name: Frontend regression
+        run: |
+          npm ci --ignore-scripts
+          find src -name '*.test.js' -print0 | xargs -0 node --test
+          npm run build
+          npm run build:server
+      - name: Linux Rust regression
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src rust:1.99.1-bookworm \
+            cargo test --manifest-path crates/Cargo.toml --workspace --locked --features h-live-server/test-support -- --test-threads=4
+      - name: Build production image and exercise lifecycle
+        env:
+          COMPOSE_PROJECT_NAME: h-live-ci-${{ github.run_id }}
+        run: |
+          docker compose build server
+          bash packaging/server/smoke.sh
+          docker image inspect h-live-server:0.1.0 --format '{{json .RepoDigests}}' > image-digests.json
+      - name: Package Docker image and deployment kit
+        run: |
+          mkdir -p server-release
+          docker save h-live-server:0.1.0 | gzip -1 > server-release/h-live-server-0.1.0-linux-amd64.docker.tar.gz
+          tar --exclude='.git' -czf server-release/h-live-server-0.1.0-deploy.tar.gz compose.yaml packaging/server/Dockerfile docs/server LICENSE DISCLAIMER.md
+          sha256sum server-release/*.gz > server-release/SHA256SUMS
+          cp image-digests.json server-release/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: h-live-server-0.1.0-linux-amd64
+          path: server-release/
+          retention-days: 30
+          if-no-files-found: error

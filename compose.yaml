@@ -1,0 +1,39 @@
+name: h-live
+services:
+  server:
+    image: h-live-server:0.1.0
+    build:
+      context: .
+      dockerfile: packaging/server/Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 180s
+    ports:
+      - "${H_LIVE_LISTEN_IP:-127.0.0.1}:${H_LIVE_PORT:-8080}:8080"
+    environment:
+      H_LIVE_PUBLIC_ORIGIN: "${H_LIVE_PUBLIC_ORIGIN:-http://localhost:8080}"
+    volumes:
+      - data:/var/lib/h-live
+      - secrets:/run/h-live-secrets:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+  init:
+    image: h-live-server:0.1.0
+    profiles: [tools]
+    entrypoint: [h-live-server]
+    command: [init-secrets]
+    volumes:
+      - secrets:/run/h-live-secrets
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  data:
+  secrets:

@@ -287,7 +287,18 @@ impl Runtime {
         directory: PathBuf,
         network: Arc<dyn crate::transport::Transport>,
     ) -> Result<Self> {
-        let config = Settings::load(directory.clone())?;
+        Self::open_with_transport_and_secrets(
+            directory,
+            network,
+            Arc::new(storage::SystemProtector),
+        )
+    }
+    pub fn open_with_transport_and_secrets(
+        directory: PathBuf,
+        network: Arc<dyn crate::transport::Transport>,
+        secrets: Arc<dyn storage::SecretProtector>,
+    ) -> Result<Self> {
+        let config = Settings::load_with_protector(directory.clone(), secrets)?;
         records(&config.value)?;
         let archive = ArchiveStore::open(&directory, ArchiveOptions::default())
             .map_err(|_| "消息库打开或升级失败，原数据已保留")?;
@@ -513,6 +524,27 @@ impl Runtime {
             return json!({"ready":false,"reason":"monitoring"});
         }
         json!({"ready":true,"reason":"ready"})
+    }
+    /// Actual live task handles, independent from last published UI state.
+    pub fn running_tasks(&self) -> Vec<String> {
+        self.rt.block_on(async {
+            self.tasks
+                .lock()
+                .await
+                .iter()
+                .filter(|(_, t)| !t.handle.is_finished())
+                .map(|(rid, _)| rid.clone())
+                .collect()
+        })
+    }
+    /// Configuration lookup does not require opening an archive read snapshot.
+    pub fn configured_tasks(&self) -> Vec<String> {
+        self.shared.state.lock().unwrap().config.value["anchors"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect()
     }
     pub(crate) fn prepare_update(&self, p: &Value) -> Result<Value> {
         {

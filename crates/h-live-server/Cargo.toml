@@ -1,0 +1,34 @@
+[package]
+name = "h-live-server"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+license = "MIT"
+description = "H-live authenticated Salvo server and durable monitor controller"
+
+[features]
+test-support = ["h-live-runtime/test-support"]
+
+[dependencies]
+h-live-runtime = { path = "../h-live-runtime" }
+qingkan-core = { path = "../qingkan-core" }
+salvo = { version = "=1.0.1", default-features = false, features = ["server", "server-handle", "http1", "fix-http1-request-uri", "serve-static"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "time", "net", "fs"] }
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+tempfile.workspace = true
+base64 = "0.22"
+chacha20poly1305 = "=0.10.1"
+rand = "0.9"
+sha2 = "0.10"
+subtle = "2.6"
+zeroize = "1.9"
+fs2 = "0.4"
+url = "2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+salvo = { version = "=1.0.1", default-features = false, features = ["test"] }

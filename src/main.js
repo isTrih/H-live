@@ -3,7 +3,7 @@ import {createViewerRefresh} from "./viewer-refresh.js";
 import "./session-quality.css";
 import { icon, esc, num } from "./presentation.js";
 import { active, live, offline, faulty, status, selectAnchors, duration, viewerCount, pcUnsupported, messageConnection } from "./features/monitor/model.js";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as nativeInvoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./style.css";
 import "./desktop.css";
@@ -19,6 +19,8 @@ import { updatePanelMarkup, renderUpdatePanel, releaseNotesMarkup, bundledReleas
 import { getUpdaterState, subscribeUpdater, checkForUpdates, installUpdate } from "./updater.js";
 import { createSessionQuality } from "./session-quality.js";
 import { createAutomaticUpdates, automaticUpdatesEnabled, saveAutomaticUpdates } from "./automatic-updates.js";
+const SERVER_MODE = import.meta.env.MODE === "server";
+let invoke = nativeInvoke;
 
 const TYPES = {
   chat: "聊天",
@@ -82,10 +84,18 @@ let bridge = (method, params = {}) =>
   invoke("backend_request", { method, params });
 const messageFeed=createRecentMessages({bridge:(...args)=>bridge(...args),getFilter:()=>({active:state.page==="messages",paused:state.paused,type:state.messageType,web_rid:state.messageAnchor}),onChange:()=>renderMessages()});
 const viewerRefresh=createViewerRefresh({bridge:(...args)=>bridge(...args),changed:()=>renderViewerRefresh(),notify:toast});
-const sessionQuality = createSessionQuality({state, bridge:(method,params)=>bridge(method,params), invoke, toast});
+const sessionQuality = createSessionQuality({state, bridge:(method,params)=>bridge(method,params), invoke:(...args)=>invoke(...args), toast});
 const automaticUpdates = createAutomaticUpdates({check:checkForUpdates,getState:getUpdaterState,
   onAvailable:update=>toast(`发现新版本 ${update.version}，可在设置中查看并安装`)});
 async function prepareBridge() {
+  if (SERVER_MODE) {
+    const remote = await import("./server/bridge.js");
+    await remote.connect();
+    bridge = remote.bridge;
+    invoke = remote.invoke;
+    document.documentElement.classList.add("server-mode");
+    return;
+  }
   if (
     import.meta.env.DEV &&
     new URLSearchParams(location.search).has("preview")
@@ -234,9 +244,9 @@ function renderPage() {
     renderProxy();
   } else if (state.page === "settings") {
     p.innerHTML =
-      heading("", "设置", "") + updatePanelMarkup(icon) +
+      heading("", "设置", "") + (SERVER_MODE ? `<section class="panel form-panel"><div class="setting-title"><h2>H-live 服务端</h2></div><button data-action="server-logout">退出管理端</button></section>` : updatePanelMarkup(icon)) +
       `<section class="panel form-panel appearance-panel"><div class="setting-title"><h2>界面字体</h2></div><label class="font-setting"><select id="ui-font" aria-label="界面字体"><option value="douyin" ${state.font === "douyin" ? "selected" : ""}>抖音美好体 · 默认</option><option value="chill" ${state.font === "chill" ? "selected" : ""}>寒蝉半圆体</option></select><span>直播的每一刻，都清晰可见。0123456789</span></label></section>` +
-      `<div class="two-column"><section class="panel form-panel setting-block"><div class="setting-title"><h2>本地数据</h2></div><div class="kv"><span>消息归档</span><strong>按主播 / 场次保存</strong></div><div class="kv"><span>运行日志</span><strong>独立存储</strong></div><button data-action="open-data" style="margin-top:16px">${icon("folder")}打开数据目录</button></section><section class="panel form-panel"><div class="setting-title"><h2>原生采集</h2></div><div id="runtime-metrics"></div></section></div>`;
+      `<div class="two-column"><section class="panel form-panel setting-block"><div class="setting-title"><h2>${SERVER_MODE ? "服务器数据" : "本地数据"}</h2></div><div class="kv"><span>消息归档</span><strong>按主播 / 场次保存</strong></div><div class="kv"><span>运行日志</span><strong>独立存储</strong></div><button data-action="open-data" style="margin-top:16px">${icon("folder")}打开数据目录</button></section><section class="panel form-panel"><div class="setting-title"><h2>原生采集</h2></div><div id="runtime-metrics"></div></section></div>`;
     renderRuntime();
   }
 }
@@ -536,7 +546,8 @@ function renderJobs() {
         .map((j) => {
           const r = j.report || {},
             running = ["running", "pending", "queued"].includes(j.status);
-          return `<div class="job-item"><strong>${esc(r.month || j.month || "月度导出")} · ${esc({ running: "正在导出", completed: "导出完成", done: "导出完成", cancelled: "已取消", error: "导出失败", failed: "导出失败" }[j.status] || j.status)}</strong>${r.path ? `<p>${esc(r.path)}</p>` : ""}${j.error ? `<p class="danger">${esc(j.error)}</p>` : ""}${["completed", "done"].includes(j.status) ? `<div class="job-result">${num(r.row_count)} 条消息 · ${(r.format || "").toUpperCase()}</div>${r.missing_time_count || r.missing_sender_count ? `<p>${num(r.missing_time_count)} 条缺发送时间，${num(r.missing_sender_count)} 条缺发送人 ID，已保留空值。</p>` : ""}${r.formula_protected_count ? `<p>CSV 中 ${num(r.formula_protected_count)} 个字段已加前缀，防止被表格软件识别为公式。</p>` : ""}` : ""}${running ? `<button class="small quiet" data-action="cancel-export" data-job="${esc(j.id || j.job_id)}">取消导出</button>` : ""}</div>`;
+          const download=SERVER_MODE && /^\/api\/v1\/files\/[a-f0-9]{32}$/.test(j.download_url||"") ? `<a class="server-download" href="${esc(j.download_url)}" download>${esc(j.file_name||"下载文件")}</a>` : "";
+          return `<div class="job-item"><strong>${esc(r.month || j.month || "月度导出")} · ${esc({ running: "正在导出", completed: "导出完成", done: "导出完成", cancelled: "已取消", error: "导出失败", failed: "导出失败" }[j.status] || j.status)}</strong>${r.path ? `<p>${esc(r.path)}</p>` : ""}${download}${j.error ? `<p class="danger">${esc(j.error)}</p>` : ""}${["completed", "done"].includes(j.status) ? `<div class="job-result">${num(r.row_count)} 条消息 · ${(r.format || "").toUpperCase()}</div>${r.missing_time_count || r.missing_sender_count ? `<p>${num(r.missing_time_count)} 条缺发送时间，${num(r.missing_sender_count)} 条缺发送人 ID，已保留空值。</p>` : ""}${r.formula_protected_count ? `<p>CSV 中 ${num(r.formula_protected_count)} 个字段已加前缀，防止被表格软件识别为公式。</p>` : ""}` : ""}${running ? `<button class="small quiet" data-action="cancel-export" data-job="${esc(j.id || j.job_id)}">取消导出</button>` : ""}</div>`;
         })
         .join("")
     : empty("尚无导出任务", "选择月份和主播即可生成文件。", "download");
@@ -614,7 +625,7 @@ function showAdd() {
 }
 function showProxyImport() {
   state.modal = { kind: "proxy-import", revision: 0, valid: false };
-  modal("导入代理", `<div class="proxy-import-intro">粘贴代理列表，或选择 JSON / 文本文件。</div><div class="proxy-import-controls"><button data-action="choose-proxy-file">${icon("folder")}选择文件</button><input id="proxy-file" type="file" accept=".json,.txt,.csv,.tsv" hidden><label for="proxy-protocol">未注明协议时使用</label><select id="proxy-protocol"><option value="socks5">SOCKS5</option><option value="http">HTTP CONNECT</option></select></div><div class="field"><label for="proxy-text">代理信息</label><textarea id="proxy-text" rows="7" autocomplete="off" spellcheck="false" placeholder="支持 JSON 数组、IP:端口:账号:密码、代理 URL，或复制的代理表格"></textarea><small>账号密码加密保存在本机。相同地址的信息有变化时会更新。</small></div><div id="proxy-preview" aria-live="polite"></div>`, `<button data-action="preview-proxy">${icon("search")}识别预览</button><button class="primary" data-action="commit-proxy" disabled>${icon("plus")}导入或更新</button>`);
+  modal("导入代理", `<div class="proxy-import-intro">粘贴代理列表，或选择 JSON / 文本文件。</div><div class="proxy-import-controls"><button data-action="choose-proxy-file">${icon("folder")}选择文件</button><input id="proxy-file" type="file" accept=".json,.txt,.csv,.tsv" hidden><label for="proxy-protocol">未注明协议时使用</label><select id="proxy-protocol"><option value="socks5">SOCKS5</option><option value="http">HTTP CONNECT</option></select></div><div class="field"><label for="proxy-text">代理信息</label><textarea id="proxy-text" rows="7" autocomplete="off" spellcheck="false" placeholder="支持 JSON 数组、IP:端口:账号:密码、代理 URL，或复制的代理表格"></textarea><small>账号密码加密保存在${SERVER_MODE ? "服务器" : "本机"}。相同地址的信息有变化时会更新。</small></div><div id="proxy-preview" aria-live="polite"></div>`, `<button data-action="preview-proxy">${icon("search")}识别预览</button><button class="primary" data-action="commit-proxy" disabled>${icon("plus")}导入或更新</button>`);
   document.querySelector(".modal").classList.add("proxy-modal");
   document.querySelector("#proxy-text").focus();
 }
@@ -877,6 +888,9 @@ async function action(el) {
   const a = el.dataset.action,
     rid = el.dataset.rid;
   switch (a) {
+    case "server-logout":
+      if (SERVER_MODE) return (await import("./server/bridge.js")).logout();
+      return;
     case "window-close":
     case "window-minimize":
     case "window-maximize":

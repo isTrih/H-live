@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({mode}) => ({
   clearScreen: false,
   server: {
     host: '127.0.0.1', port: 1420, strictPort: true,
@@ -12,5 +12,5 @@ export default defineConfig({
       '**/.venv/**', '**/.release-secrets/**',
     ] },
   },
-  build: { outDir: 'dist-ui', emptyOutDir: true, target: 'es2021' },
-});
+  build: { outDir: mode === 'server' ? 'dist-web' : 'dist-ui', emptyOutDir: true, target: 'es2021' },
+}));

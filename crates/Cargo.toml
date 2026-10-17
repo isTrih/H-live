@@ -1,5 +1,5 @@
 [workspace]
-members = ["qingkan-core", "h-live-runtime"]
+members = ["qingkan-core", "h-live-runtime", "h-live-server"]
 resolver = "2"
 
 [workspace.package]

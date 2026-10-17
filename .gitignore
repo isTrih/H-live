@@ -2,6 +2,7 @@
 /target/
 /src-tauri/target/
 /dist-ui/
+/dist-web/
 /dist/
 /build/
 /.release-secrets/
