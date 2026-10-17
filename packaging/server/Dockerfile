@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY src ./src
 COPY index.html vite.config.js ./
+COPY release-notes ./release-notes
 RUN npm run build:server
 
 FROM rust:1.99.1-bookworm AS rust
