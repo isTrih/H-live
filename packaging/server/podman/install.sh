@@ -66,7 +66,12 @@ else
   (set -o noclobber; cat "$source_dir/10-graceful-stop.conf" > "$dropin")
 fi
 systemctl --user daemon-reload
-[[ $(systemctl --user show h-live.service --property=LoadState --value) == loaded ]] || die 'Quadlet generation failed; check your Podman/systemd installation.'
+if [[ $(systemctl --user show h-live.service --property=LoadState --value) != loaded ]]; then
+  if [[ -x /usr/lib/systemd/system-generators/podman-system-generator ]]; then
+    QUADLET_UNIT_DIRS="$quadlet_root" /usr/lib/systemd/system-generators/podman-system-generator --user --dryrun >&2 || true
+  fi
+  die 'Quadlet generation failed; check your Podman/systemd installation.'
+fi
 printf '%s\n' 'Installed; existing secrets and configuration preserved. No container has been started.' \
   'Start: systemctl --user start h-live.service' \
   'Boot/logout persistence: ask your administrator to run loginctl enable-linger YOUR_DEPLOYMENT_USER' \
