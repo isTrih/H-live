@@ -8,4 +8,4 @@
 
 0.3.0 已将采集、签名、代理和调度迁移至 Rust，见 [迁移计划与结果](engineering/RUST_MIGRATION.md)。0.2.x 文档中的 Python/V8 描述仅适用于历史版本。
 
-Rust + Salvo 独立服务端已开始实现，按 Linux + Docker 交付；尚未部署到用户服务器。当前功能、部署步骤与边界见 [服务端说明](server/README.md)，设计依据见 [实施方案](engineering/SERVER_PLAN.md) 与 [官方资料调研](research/salvo-server-feasibility-2026-10-17.md)。
+Rust + Salvo 独立服务端 0.1.0 已完成 Linux amd64 + Docker 构建与验收；尚未部署到用户服务器。当前功能和步骤见 [服务端说明](server/README.md)，证据与边界见 [验证记录](engineering/SERVER_VALIDATION_0.1.0.md)，设计依据见 [实施方案](engineering/SERVER_PLAN.md) 与 [官方资料调研](research/salvo-server-feasibility-2026-10-17.md)。

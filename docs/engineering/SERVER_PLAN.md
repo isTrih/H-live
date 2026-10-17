@@ -1,6 +1,6 @@
 # H-live Server：Rust + Salvo 服务端方案
 
-状态：首版服务端已实现，正在进行 Linux + Docker 验收；尚未部署到用户服务器。继续保留现有 Tauri 桌面版。服务端不引入 Python、不使用抖音登录 Cookie、不新增礼物记录。运行方式和当前实现范围以 [服务端说明](../server/README.md) 为准；以下保留设计目标，未完成项不作为已验收承诺。
+状态：首版 Linux amd64 + Docker 服务端已完成构建与容器验收；尚未部署到用户服务器。继续保留现有 Tauri 桌面版。服务端不引入 Python、不使用抖音登录 Cookie、不新增礼物记录。当前实现范围以 [服务端说明](../server/README.md) 和 [0.1.0 验证](SERVER_VALIDATION_0.1.0.md) 为准；以下保留设计目标，未完成项不作为已验收承诺。
 
 ## 目标与复用
 
