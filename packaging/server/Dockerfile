@@ -17,6 +17,7 @@ RUN cargo build --manifest-path crates/Cargo.toml -p h-live-server --release --l
     && sh /collect-licenses.sh /build/crates/Cargo.toml /dependency-licenses
 
 FROM debian:bookworm-20261005-slim
+LABEL org.opencontainers.image.source="https://github.com/isTrih/H-live" org.opencontainers.image.version="0.1.0" org.opencontainers.image.licenses="MIT"
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 hlive && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin hlive \
@@ -26,6 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /opt/h-live
 COPY --from=rust /build/crates/target/release/h-live-server /usr/local/bin/h-live-server
 COPY --from=web /build/dist-web ./ui
+COPY --from=web /build/node_modules/@tauri-apps/api/LICENSE* ./licenses/javascript/tauri-api/
+COPY --from=web /build/node_modules/@tauri-apps/plugin-updater/LICENSE* ./licenses/javascript/tauri-updater/
 COPY --from=rust /dependency-licenses ./licenses/dependencies
 COPY licenses ./licenses/upstream
 COPY src/fonts/licenses ./licenses/fonts

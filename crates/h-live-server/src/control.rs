@@ -115,6 +115,9 @@ impl Control {
         }))
     }
     pub async fn request(&self, method: &str, p: Value) -> Result<Value> {
+        if !p.is_object() {
+            return Err("请求必须为 JSON 对象".into());
+        }
         if !self.ready.load(Ordering::Acquire) {
             return Err("服务正在停止".into());
         }
@@ -166,6 +169,11 @@ impl Actor {
     ) -> Result<Self> {
         fs::create_dir_all(&directory).map_err(|_| "数据目录不可写")?;
         let directory = directory.canonicalize().map_err(|_| "数据目录无效")?;
+        if directory.join("update-resume.json").exists() {
+            return Err(
+                "数据目录包含桌面更新恢复文件；请仅迁移历史数据库并重新导入主播与代理".into(),
+            );
+        }
         let private = directory.join(".server");
         let exports = directory.join("exports");
         for p in [&private, &exports] {

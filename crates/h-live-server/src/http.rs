@@ -133,13 +133,13 @@ fn permit(req: &Request, res: &mut Response, a: &Auth, mutation: bool) -> bool {
         error(res, 401, "请先登录 H-live 管理端");
         return false;
     };
-    if mutation && let Some(csrf) = csrf {
-        if req.header::<String>("origin").as_deref() != Some(&a.origin)
-            || req.header::<String>("x-h-live-csrf").as_deref() != Some(&csrf)
-        {
-            error(res, 403, "请求来源或会话校验失败");
-            return false;
-        }
+    if mutation
+        && let Some(csrf) = csrf
+        && (req.header::<String>("origin").as_deref() != Some(&a.origin)
+            || req.header::<String>("x-h-live-csrf").as_deref() != Some(&csrf))
+    {
+        error(res, 403, "请求来源或会话校验失败");
+        return false;
     }
     true
 }

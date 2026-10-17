@@ -81,8 +81,17 @@ fn run() -> Result<(), String> {
             .map_err(|_| "HTTP 监听失败")?;
         let server = Server::new(acceptor);
         let handle = server.handle();
+        let watched = control.clone();
         let signal = tokio::spawn(async move {
-            shutdown_signal().await;
+            tokio::select! {
+                _=shutdown_signal()=>{},
+                _=async {
+                    while watched.ready.load(std::sync::atomic::Ordering::Acquire) {
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
+                    eprintln!("Monitoring controller exited; stopping HTTP service for supervisor restart.");
+                }=>{}
+            }
             handle.stop_graceful(Duration::from_secs(20));
         });
         println!(

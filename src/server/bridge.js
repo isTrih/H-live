@@ -1,4 +1,3 @@
-import {esc} from "../presentation.js";
 import brandIcon from "../brand-icon.png";
 import "./server.css";
 import {operations,parameters} from "./protocol.js";
@@ -10,11 +9,13 @@ async function fetchJson(path,body,method="POST") {
   return data;
 }
 async function credentials() {
+  let initialError="";
   try {const s=await fetchJson("session",null,"GET");csrf=s.csrf;instance=s.instance;return;}
-  catch(e){if(e.status!==401)throw e;}
+  catch(e){if(e.status!==401)initialError="暂时无法连接管理接口，请稍后重试。";}
   const root=document.createElement("div");root.className="server-login";
   root.innerHTML=`<form class="server-login-card"><img src="${brandIcon}" alt=""><h1>氢看直播</h1><p>登录服务器管理端</p><label for="server-token">管理令牌</label><input id="server-token" name="token" type="password" autocomplete="off" required maxlength="100" autofocus><div class="server-login-error" role="alert"></div><button class="primary" type="submit">登录</button></form>`;
   document.body.append(root);root.querySelector("input").focus();
+  root.querySelector(".server-login-error").textContent=initialError;
   await new Promise(resolve=>root.querySelector("form").addEventListener("submit",async event=>{
     event.preventDefault();const button=root.querySelector("button");button.disabled=true;
     try {const input=root.querySelector("input");const token=input.value.trim();const s=await fetchJson("login",{token});input.value="";csrf=s.csrf;resolve();root.remove();}
@@ -41,5 +42,3 @@ export async function invoke(command,params={}){
   throw new Error("此操作仅适用于桌面版");
 }
 export async function logout(){await fetchJson("logout",{});csrf="";location.reload();}
-// Keep download links bound to server-generated IDs, never arbitrary archive paths.
-export function downloadMarkup(job){return /^\/api\/v1\/files\/[a-f0-9]{32}$/.test(job.download_url||"")?`<a class="server-download" href="${esc(job.download_url)}" download>${esc(job.file_name||"下载文件")}</a>`:"";}
