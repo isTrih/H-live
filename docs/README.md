@@ -7,3 +7,5 @@
 当前产品范围以根目录 README 为准：0.3.0 继续停用新增礼物采集，仅保留历史记录。旧版本文档提及的礼物采集、登录排查或下一步账号对照不属于现行需求。
 
 0.3.0 已将采集、签名、代理和调度迁移至 Rust，见 [迁移计划与结果](engineering/RUST_MIGRATION.md)。0.2.x 文档中的 Python/V8 描述仅适用于历史版本。
+
+Rust + Salvo 服务端目前仅完成可行性评估，尚未开发或部署。参见 [服务端实施方案](engineering/SERVER_PLAN.md) 与 [官方资料调研](research/salvo-server-feasibility-2026-10-17.md)。
