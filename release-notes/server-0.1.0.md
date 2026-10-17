@@ -15,7 +15,7 @@
 300 个配置任务、约 50 个同时开播仍需按实际出口验证；尚未完成真实 50 房间及 24 小时生产验收。平台风控、游客下发范围和中断期间消息缺失仍然存在。
 
 本项目仅用于学习研究，严禁用于商业谋利、破坏系统、盗取个人信息等行为。侵权或涉及相关利益请联系原作者。
+
 ## Podman 部署补充
 
 新增 rootless Podman + Quadlet 单体部署包，复用 server 0.1.0 原镜像。一个容器承载网页、API、采集、SQLite 和导出，密钥在宿主机初始化，由 systemd 管理健康检查和自动重启。Linux 生命周期验收已通过；使用说明见 `docs/server/PODMAN.md`，证据见 `docs/engineering/SERVER_PODMAN_VALIDATION.md`。原 Docker 附件和桌面更新渠道保持不变。
-
