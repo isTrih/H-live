@@ -39,6 +39,11 @@ jobs:
           docker compose build server
           bash packaging/server/smoke.sh
           docker image inspect h-live-server:0.1.0 --format '{{json .RepoDigests}}' > image-digests.json
+      - name: Offline backend capacity and reconnect wave
+        run: |
+          mkdir -p server-release
+          docker run --rm -v "$PWD:/src" -w /src rust:1.99.1-bookworm \
+            cargo run --manifest-path crates/Cargo.toml --locked -p h-live-runtime --features test-support --example benchmark -- /src/server-release/offline-capacity.json
       - name: Package Docker image and deployment kit
         run: |
           mkdir -p server-release
