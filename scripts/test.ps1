@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $root
 try {
+    & ./scripts/check_no_python.ps1
     if ($Suite -in @('all','frontend')) {
         $files = @(Get-ChildItem -LiteralPath src -Filter '*.test.js' -File -Recurse | Select-Object -ExpandProperty FullName)
         & node --test @files

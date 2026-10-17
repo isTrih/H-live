@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $root
 try {
+    & ./scripts/check_no_python.ps1
     . ./scripts/rust-env.ps1
     & npm.cmd run build
     if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed' }

@@ -64,3 +64,5 @@ cargo fetch --manifest-path crates/Cargo.toml --locked --target x86_64-pc-window
 - 依赖按各自许可证分发，见 `THIRD_PARTY_DESKTOP_NOTICES.txt` 和发行包 `licenses/`。
 
 公开源码不包含用户配置、代理凭据、登录数据、私钥、聊天数据库、现场抓包或诊断文件。活动二进制测试夹具全部为合成数据；原始 0.2.4 源码仍可从 Git 历史查看。
+
+测试与构建会先运行 `scripts/check_no_python.ps1`，拒绝已跟踪的 Python 源码、字节码、扩展模块、依赖清单、Python shebang 与文档中的 Python 代码块。旧版代码仅保留在 Git 历史中。
