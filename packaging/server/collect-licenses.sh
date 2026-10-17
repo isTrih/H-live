@@ -13,8 +13,12 @@ while IFS= read -r package; do
     mkdir -p "$destination/$package"
     find "$source" -maxdepth 1 -type f \( -iname 'LICENSE*' -o -iname 'LICENCE*' -o -iname 'COPYING*' -o -iname 'NOTICE*' -o -iname 'COPYRIGHT*' -o -iname 'AUTHORS*' \) -exec cp '{}' "$destination/$package/" \;
     if [ -z "$(ls -A "$destination/$package")" ]; then
-        if [ -d "/extra-licenses/$package" ]; then cp -r "/extra-licenses/$package/." "$destination/$package/";
-        else find "$source" -type f \( -iname 'LICENSE*' -o -iname 'COPYING*' \) -exec cp '{}' "$destination/$package/" \;; fi
+        case "$package" in
+          salvo-1.0.1|salvo_core-1.0.1|salvo_macros-1.0.1|salvo-serde-util-1.0.1|salvo-serve-static-1.0.1)
+            cp /extra-licenses/salvo-1.0.1/* "$destination/$package/";;
+          *) if [ -d "/extra-licenses/$package" ]; then cp -r "/extra-licenses/$package/." "$destination/$package/";
+             else find "$source" -type f \( -iname 'LICENSE*' -o -iname 'COPYING*' \) -exec cp '{}' "$destination/$package/" \;; fi;;
+        esac
     fi
     [ -n "$(ls -A "$destination/$package")" ] || { echo "License review required: $package" >&2; exit 1; }
 done < /tmp/license-packages

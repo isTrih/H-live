@@ -1,0 +1,4 @@
+Official Salvo v1.0.1 Apache-2.0 license, retrieved 2026-10-17.
+Source: https://github.com/salvo-rs/salvo/blob/v1.0.1/LICENSE
+Git blob SHA1: aac89718a687dc98652f98e39790065c8f91b6e2
+Applies to salvo, salvo_core, salvo_macros, salvo-serde-util, salvo-serve-static 1.0.1; their published crates omit the complete license text.

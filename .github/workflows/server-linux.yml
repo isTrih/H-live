@@ -65,7 +65,8 @@ jobs:
           mkdir -p server-release
           docker save h-live-server:0.1.0 | gzip -1 > server-release/h-live-server-0.1.0-linux-amd64.docker.tar.gz
           tar --exclude='.git' -czf server-release/h-live-server-0.1.0-deploy.tar.gz compose.yaml packaging/server/Dockerfile docs/server LICENSE DISCLAIMER.md
-          sha256sum server-release/*.gz > server-release/SHA256SUMS
+          (cd server-release && sha256sum *.gz > SHA256SUMS)
+          printf '{"commit":"%s","version":"0.1.0","platform":"linux-amd64"}\n' "$GITHUB_SHA" > server-release/build-info.json
           cp image-digests.json server-release/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
