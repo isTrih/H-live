@@ -41,6 +41,10 @@ jobs:
           sudo -u hlive-ci env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/hlive-ci USER=hlive-ci LOGNAME=hlive-ci XDG_RUNTIME_DIR="/run/user/$uid" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" H_LIVE_EPHEMERAL_CI=1 bash -c '
             set -euo pipefail
             cd /home/hlive-ci/kit
+            # Hosted-runner PAM defaults point at the runner account, even for a new user.
+            # Correct only this disposable user manager; do not relax host permissions.
+            systemctl --user set-environment HOME="$HOME" XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"
+            systemctl --user unset-environment CONTAINERS_STORAGE_CONF CONTAINERS_CONF REGISTRY_AUTH_FILE
             podman version --format "{{.Client.Version}}"
             podman load -i /tmp/h-live-image.tar.gz
             podman tag docker.io/library/h-live-server:0.1.0 localhost/h-live-server:0.1.0
