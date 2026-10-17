@@ -40,9 +40,9 @@ jobs:
           sudo chown -R hlive-ci:hlive-ci /home/hlive-ci/kit
           sudo -u hlive-ci env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/hlive-ci USER=hlive-ci LOGNAME=hlive-ci XDG_RUNTIME_DIR="/run/user/$uid" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" H_LIVE_EPHEMERAL_CI=1 bash -c '
             set -euo pipefail
+            cd /home/hlive-ci/kit
             podman version --format "{{.Client.Version}}"
             podman load -i /tmp/h-live-image.tar.gz
-            cd /home/hlive-ci/kit
             bash packaging/server/podman/smoke.sh
           '
           printf '{"commit":"%s","image_sha256":"02181250d1fda167368df810fb629d54453d33fd5f15b0418904c2044300cd05","platform":"ubuntu-24.04-linux-amd64","rootless":true,"quadlet_systemd":true,"container_count":1,"result":"passed","scope":"synthetic data; no real room connections"}\n' "$GITHUB_SHA" > podman-validation.json
