@@ -1,0 +1,39 @@
+[Unit]
+Description=H-live single-container monitoring server
+StartLimitIntervalSec=0
+
+[Container]
+Image=localhost/h-live-server:0.1.0
+Pull=never
+ContainerName=h-live
+User=10001
+Group=10001
+UserNS=keep-id:uid=10001,gid=10001
+PublishPort=127.0.0.1:8080:8080
+EnvironmentFile=%h/.config/h-live/server.env
+Volume=%h/.local/share/h-live/data:/var/lib/h-live:Z
+Volume=%h/.local/share/h-live/secrets:/run/h-live-secrets:ro,Z
+ReadOnly=true
+ReadOnlyTmpfs=false
+Tmpfs=/tmp:size=128m,mode=1777
+DropCapability=ALL
+NoNewPrivileges=true
+PidsLimit=128
+PodmanArgs=--memory=2g --stop-timeout=180
+LogDriver=journald
+HealthCmd=h-live-server healthcheck
+HealthInterval=30s
+HealthStartPeriod=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthOnFailure=stop
+
+[Service]
+Restart=always
+RestartSec=5s
+TimeoutStartSec=180
+TimeoutStopSec=200
+UMask=0077
+
+[Install]
+WantedBy=default.target

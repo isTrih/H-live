@@ -37,7 +37,7 @@ Windows 安装器与 CDN 更新文件见 [Releases](https://github.com/isTrih/H-
 
 ## 构建
 
-新增独立 **H-live Server 0.1.0**：Rust + Salvo、Linux + Docker，复用现有看板和归档功能，支持浏览器管理与持续后台监控。使用独立管理认证、任务恢复、代理凭据加密和导出下载；桌面版及 CDN 更新渠道保持独立。部署步骤与验收范围见 [服务端说明](docs/server/README.md)。
+新增独立 **H-live Server 0.1.0**：Rust + Salvo、Linux 单体容器，复用现有看板和归档功能，支持浏览器管理与持续后台监控。推荐 [rootless Podman + Quadlet](docs/server/PODMAN.md)，一个应用容器承载网页、API、采集、SQLite 和导出，不需要初始化容器；Docker Compose 作为兼容方案保留。使用独立管理认证、任务恢复、代理凭据加密和导出下载；桌面版及 CDN 更新渠道保持独立。部署步骤与验收范围见 [服务端说明](docs/server/README.md)。
 
 准备 Windows 10/11 x64、PowerShell 7、Rust MSVC、Node.js 24、Visual Studio C++ 桌面构建工具及 Windows SDK。首次构建需联网获取锁定依赖。
 

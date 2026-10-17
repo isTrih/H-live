@@ -1,0 +1,61 @@
+name: Server Podman
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packaging/server/podman/**'
+      - 'docs/server/PODMAN.md'
+      - '.github/workflows/server-podman.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: server-podman-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  rootless:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - name: Verify scripts and download existing released image
+        run: |
+          set -euo pipefail
+          bash -n packaging/server/podman/*.sh
+          sudo apt-get update -qq
+          sudo apt-get install -y podman uidmap dbus-user-session slirp4netns shellcheck
+          shellcheck packaging/server/podman/*.sh
+          curl --fail --location --retry 3 -o /tmp/h-live-image.tar.gz https://github.com/isTrih/H-live/releases/download/server-v0.1.0/h-live-server-0.1.0-linux-amd64.docker.tar.gz
+          echo '02181250d1fda167368df810fb629d54453d33fd5f15b0418904c2044300cd05  /tmp/h-live-image.tar.gz' | sha256sum -c -
+      - name: Exercise real rootless systemd Quadlet lifecycle
+        run: |
+          set -euo pipefail
+          sudo useradd --create-home --shell /bin/bash hlive-ci
+          uid=$(id -u hlive-ci)
+          sudo loginctl enable-linger hlive-ci
+          sudo systemctl start "user@$uid.service"
+          sudo mkdir -p /home/hlive-ci/kit/packaging/server
+          sudo cp -r packaging/server/podman /home/hlive-ci/kit/packaging/server/
+          sudo chown -R hlive-ci:hlive-ci /home/hlive-ci/kit
+          sudo -u hlive-ci env HOME=/home/hlive-ci XDG_RUNTIME_DIR="/run/user/$uid" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" H_LIVE_EPHEMERAL_CI=1 bash -c '
+            set -euo pipefail
+            podman version --format "{{.Client.Version}}"
+            podman load -i /tmp/h-live-image.tar.gz
+            cd /home/hlive-ci/kit
+            bash packaging/server/podman/smoke.sh
+          '
+          printf '{"commit":"%s","image_sha256":"02181250d1fda167368df810fb629d54453d33fd5f15b0418904c2044300cd05","platform":"ubuntu-24.04-linux-amd64","rootless":true,"quadlet_systemd":true,"container_count":1,"result":"passed","scope":"synthetic data; no real room connections"}\n' "$GITHUB_SHA" > podman-validation.json
+      - name: Package standalone deployment kit
+        run: |
+          set -euo pipefail
+          mkdir podman-release
+          tar -czf podman-release/h-live-server-0.1.0-podman.tar.gz packaging/server/podman docs/server LICENSE DISCLAIMER.md
+          cp podman-validation.json podman-release/
+          (cd podman-release && sha256sum *.gz *.json > PODMAN-SHA256SUMS)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: h-live-server-0.1.0-podman
+          path: podman-release/
+          if-no-files-found: error
+          retention-days: 30

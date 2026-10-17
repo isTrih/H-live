@@ -1,4 +1,6 @@
-# H-live Server 0.1.0 · Linux + Docker
+# H-live Server 0.1.0 · Linux 单体容器
+
+**推荐部署：[rootless Podman + Quadlet](PODMAN.md)**。网页、API、采集、SQLite 和导出在一个应用容器中运行，密钥在宿主机初始化，无需初始化容器。以下保留 Docker Compose 兼容部署说明。
 
 独立 Rust + Salvo 服务进程，复用桌面 0.3.0 的采集与归档核心。浏览器关闭后，服务器仍继续监控。保留看板、实时消息、代理及 HTTPS 订阅、场次分析、有效发言与在线指标、归档删除、CSV/XLSX 导出。桌面版继续保留。
 
