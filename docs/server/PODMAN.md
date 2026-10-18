@@ -1,8 +1,10 @@
 # 单体容器部署 · Podman + Quadlet
 
+当前默认方案已按用户选择改为 [Docker Engine 单容器](DOCKER_SINGLE.md)。本文保留可选 Podman 部署方式。
+
 H-live Server 使用一个 Rust 进程，同时提供网页、Salvo API、采集调度、SQLite 归档和 CSV/XLSX 导出。只有 **一个应用容器**，没有初始化容器，不依赖独立数据库、缓存或网页容器。systemd 属于宿主机服务管理，不是额外容器。
 
-此前 Compose 方案用于统一管理配置和数据卷。现在推荐单机使用无 root 的 Podman + Quadlet，直接复用 server 0.1.0 已发布镜像；部署方式变化不代表采集协议或性能发生变化。Docker Compose 仍作为兼容方案保留。
+此前 Compose 方案用于统一管理配置和数据卷。此可选方案使用无 root 的 Podman + Quadlet，直接复用 server 0.1.0 已发布镜像；部署方式变化不代表采集协议或性能发生变化。
 
 ## 准备与安装
 
