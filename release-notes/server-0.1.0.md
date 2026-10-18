@@ -19,3 +19,11 @@
 ## Podman 部署补充
 
 新增 rootless Podman + Quadlet 单体部署包，复用 server 0.1.0 原镜像。一个容器承载网页、API、采集、SQLite 和导出，密钥在宿主机初始化，由 systemd 管理健康检查和自动重启。Linux 生命周期验收已通过；使用说明见 `docs/server/PODMAN.md`，证据见 `docs/engineering/SERVER_PODMAN_VALIDATION.md`。原 Docker 附件和桌面更新渠道保持不变。
+
+## 默认 Docker 单容器 · 2026-10-18
+
+按部署偏好，默认改为 Docker Engine 的单个应用容器，使用 `docker run`，不要求 Compose 或 Podman，也没有额外初始化容器。首次在同容器内自动生成密钥，然后由 Rust 服务作为 PID 1；网页、API、采集、SQLite 和导出均在同一个容器内。
+
+SQLite 文件、WAL、任务与导出保存到容器外的 `h-live-data` 卷，密钥保存在独立 `h-live-secrets` 卷。Linux 已验证容器移除重建后数据卷和原密钥保留、正常停止完成归档、缺密钥时拒绝重新生成。外部 PostgreSQL 列为后续可选后端，当前尚未实现。
+
+复用原 server 0.1.0 镜像，不改动桌面 0.3.0 或 CDN 更新渠道。新增 `h-live-server-0.1.0-docker-single.tar.gz`、`DOCKER-SINGLE-SHA256SUMS` 和验证报告。步骤见 `docs/server/DOCKER_SINGLE.md`，范围与未测项见 `docs/engineering/SERVER_DOCKER_SINGLE_VALIDATION.md`。
