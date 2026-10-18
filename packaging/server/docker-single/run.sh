@@ -11,7 +11,8 @@ for value in "$name" "$data_volume" "$secret_volume"; do
   [[ $value =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]] || { echo 'Invalid container/volume name.' >&2; exit 1; }
 done
 [[ $data_volume != "$secret_volume" ]] || { echo 'Use separate data and secrets volumes.' >&2; exit 1; }
-[[ $port =~ ^[0-9]+$ && ${#port} -le 5 ]] && ((10#$port >= 1 && 10#$port <= 65535)) || { echo 'Invalid port.' >&2; exit 1; }
+if [[ ! $port =~ ^[0-9]+$ || ${#port} -gt 5 ]]; then echo 'Invalid port.' >&2; exit 1; fi
+if ((10#$port < 1 || 10#$port > 65535)); then echo 'Invalid port.' >&2; exit 1; fi
 docker image inspect "$image" > /dev/null
 if docker container inspect "$name" > /dev/null 2>&1; then
   printf 'Container already exists. Use docker start %s, or stop/back up/remove it before recreating.\n' "$name" >&2

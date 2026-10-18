@@ -35,6 +35,7 @@ request() { printf 'header = "Authorization: Bearer %s"\n' "$token" | curl -fsS 
 request state '{}' > /tmp/hlive-docker-initial.json
 jq -e '.anchors | length == 0' /tmp/hlive-docker-initial.json > /dev/null
 request anchors/import '{"values":"1"}' > /dev/null
+docker exec "$name" sh -c 'test -s /var/lib/h-live/messages.sqlite3 && printf persistent > /var/lib/h-live/.docker-volume-probe'
 docker stop --time 180 "$name" > /dev/null
 [[ $(docker inspect "$name" --format '{{.State.ExitCode}}') == 0 ]]
 docker logs "$name" | grep -q 'All monitoring workers stopped and archives flushed'
@@ -42,6 +43,8 @@ docker logs "$name" | grep -q 'All monitoring workers stopped and archives flush
 docker rm "$name" > /dev/null
 bash packaging/server/docker-single/run.sh > /dev/null
 ready
+[[ $(docker exec "$name" cat /var/lib/h-live/.docker-volume-probe) == persistent ]]
+docker exec "$name" test -s /var/lib/h-live/messages.sqlite3
 [[ $keys_before == "$(docker exec "$name" sh -c 'sha256sum /run/h-live-secrets/master.key /run/h-live-secrets/admin-token')" ]]
 request state '{}' > /tmp/hlive-docker-restored.json
 jq -e '(.anchors | length == 1) and (.anchors[0].active == false)' /tmp/hlive-docker-restored.json > /dev/null
