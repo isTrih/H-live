@@ -1,1 +1,1 @@
-H-live 0.3.0 uses a Rust collector and Tauri WebView. See THIRD_PARTY_DESKTOP_NOTICES.txt, LICENSE, DISCLAIMER.md and licenses/.
+H-live 0.3.1 uses a Rust collector and Tauri WebView. See THIRD_PARTY_DESKTOP_NOTICES.txt, LICENSE, DISCLAIMER.md and licenses/.
