@@ -1,8 +1,8 @@
-# H-live Server 0.1.0 · Linux 单体容器
+# H-live Server 0.1.1 · Linux 单体容器
 
 **默认部署：[Docker Engine 单容器](DOCKER_SINGLE.md)**。网页、API、采集、SQLite 和导出在一个应用容器中运行，同容器自动初始化，无需 Compose 或额外初始化容器。SQLite 文件默认保存在容器外的持久化卷；PostgreSQL 是后续可选后端计划，当前尚未实现。下文保留早期 Docker Compose 部署说明；[Podman + Quadlet](PODMAN.md) 作为可选方案。
 
-独立 Rust + Salvo 服务进程，复用桌面 0.3.0 的采集与归档核心。浏览器关闭后，服务器仍继续监控。保留看板、实时消息、代理及 HTTPS 订阅、场次分析、有效发言与在线指标、归档删除、CSV/XLSX 导出。桌面版继续保留。
+独立 Rust + Salvo 服务进程，复用桌面 0.3.1 的采集与归档核心。浏览器关闭后，服务器仍继续监控。保留看板、实时消息、代理及 HTTPS 订阅、场次分析、有效发言与在线指标、归档删除、CSV/XLSX 导出。桌面版继续保留。
 
 不使用抖音登录 Cookie，不新增礼物记录，不播放或录制音视频。管理端的登录令牌仅用于保护 H-live，与抖音账号无关。首次启动没有内置主播。
 
@@ -23,8 +23,8 @@ docker compose up -d --wait server
 若使用发行包，先校验 SHA256SUMS，加载镜像，再在解压的部署目录运行初始化和启动命令，不需要安装 Rust、Node 或桌面环境：
 
 ```sh
-docker load -i h-live-server-0.1.0-linux-amd64.docker.tar.gz
-tar -xzf h-live-server-0.1.0-deploy.tar.gz
+docker load -i h-live-server-0.1.1-linux-amd64.docker.tar.gz
+tar -xzf h-live-server-0.1.1-deploy.tar.gz
 docker compose --profile tools run --rm init
 docker compose up -d --wait server
 ```
@@ -96,7 +96,7 @@ docker compose up -d --wait server
 
 ## 升级与限制
 
-服务端通过 Docker 镜像升级，独立使用 `server-v0.1.0` 版本线；不会覆盖桌面 0.3.0 的 CDN 清单或触发 Tauri 热更新。先备份数据和密钥，再停止旧容器、加载新镜像、启动并确认任务恢复。数据库升级后的降级需要恢复配套备份，不能只替换旧镜像。
+服务端通过 Docker 镜像升级，独立使用 `server-v0.1.1` 版本线；不会覆盖桌面 0.3.1 的 CDN 清单或触发 Tauri 热更新。先备份数据和密钥，再停止旧容器、加载新镜像、启动并确认任务恢复。数据库升级后的降级需要恢复配套备份，不能只替换旧镜像。
 
 300 个配置任务、约 50 个同时开播是目标规模。模拟连接测试不能替代真实平台验收；尚未取得实际服务器 24 小时、真实 50 房间同时接收的验证结果。平台 444/429、游客限制、网络中断和代理故障仍会导致缺失，停机期间不能补采，也不会伪造消息。
 

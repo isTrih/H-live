@@ -24,6 +24,8 @@ ready() {
 ready
 [[ $(docker ps --format '{{.Names}}') == "$name" ]]
 [[ $(docker exec "$name" id -u) == 10001 ]]
+expected_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' crates/h-live-server/Cargo.toml | head -n 1)
+[[ $(docker exec "$name" h-live-server --version) == "h-live-server $expected_version" ]]
 docker exec "$name" sh -c 'test "$(cat /proc/1/comm)" = h-live-server'
 docker exec "$name" sh -c '! touch /opt/h-live/write-test' 2>/dev/null
 [[ $(docker exec "$name" sh -c 'command -v python || command -v python3 || true') == '' ]]

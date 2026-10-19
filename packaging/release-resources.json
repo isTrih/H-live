@@ -30,7 +30,9 @@
     "docs/engineering/VALIDATION_0.3.0.md",
     "docs/research/remastered-rust-migration-2026-10-16.md",
     "licenses/upstream/DouyinLiveMonitor-MIT.txt",
-    "licenses/upstream/DouyinLiveMonitor-Remastered-MIT.txt"
+    "licenses/upstream/DouyinLiveMonitor-Remastered-MIT.txt",
+    "docs/engineering/ADAPTIVE_POLLING.md",
+    "docs/engineering/VALIDATION_0.3.1.md"
   ],
   "directories": [
     "release-notes"

@@ -1,7 +1,7 @@
 name: h-live
 services:
   server:
-    image: h-live-server:0.1.0
+    image: h-live-server:0.1.1
     build:
       context: .
       dockerfile: packaging/server/Dockerfile
@@ -25,7 +25,7 @@ services:
       driver: json-file
       options: {max-size: 10m, max-file: "3"}
   init:
-    image: h-live-server:0.1.0
+    image: h-live-server:0.1.1
     profiles: [tools]
     entrypoint: [h-live-server]
     command: [init-secrets]

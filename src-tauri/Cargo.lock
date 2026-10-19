@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "douyin-live-monitor"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "h-live-runtime",
  "rfd",
@@ -1609,7 +1609,7 @@ dependencies = [
 
 [[package]]
 name = "h-live-runtime"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -3059,7 +3059,7 @@ dependencies = [
 
 [[package]]
 name = "qingkan-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
  "crossbeam-channel",

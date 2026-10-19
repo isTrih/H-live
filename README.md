@@ -1,6 +1,6 @@
 # H-live · 氢看直播
 
-Windows 多主播直播消息监控应用。**0.3.0 使用 Rust 后端 + Tauri 2 界面，不附带 Python、Node、独立 V8 签名引擎或外部签名服务。** 保留原有顶部菜单、监控网格、字体、场次分析和月度导出界面。
+Windows 多主播直播消息监控应用。**0.3.1 使用 Rust 后端 + Tauri 2 界面，不附带 Python、Node、独立 V8 签名引擎或外部签名服务。** 保留原有顶部菜单、监控网格、字体、场次分析和月度导出界面。
 
 Windows 安装器与 CDN 更新文件见 [Releases](https://github.com/isTrih/H-live/releases)。更新清单由维护者手动上传 CDN。
 
@@ -37,7 +37,7 @@ Windows 安装器与 CDN 更新文件见 [Releases](https://github.com/isTrih/H-
 
 ## 构建
 
-新增独立 **H-live Server 0.1.0**：Rust + Salvo、Linux 单体容器，复用现有看板和归档功能，支持浏览器管理与持续后台监控。默认使用 [Docker Engine 单容器](docs/server/DOCKER_SINGLE.md)，一个应用容器承载网页、API、采集、SQLite 和导出，同容器自动初始化。SQLite 文件保存在容器外的持久化卷；外部 PostgreSQL 是后续可选后端计划，当前尚未实现。保留早期 Compose 和可选 Podman 方案。使用独立管理认证、任务恢复、代理凭据加密和导出下载；桌面版及 CDN 更新渠道保持独立。部署步骤与验收范围见 [服务端说明](docs/server/README.md)。
+新增独立 **H-live Server 0.1.1**：Rust + Salvo、Linux 单体容器，复用现有看板和归档功能，支持浏览器管理与持续后台监控。默认使用 [Docker Engine 单容器](docs/server/DOCKER_SINGLE.md)，一个应用容器承载网页、API、采集、SQLite 和导出，同容器自动初始化。SQLite 文件保存在容器外的持久化卷；外部 PostgreSQL 是后续可选后端计划，当前尚未实现。保留早期 Compose 和可选 Podman 方案。使用独立管理认证、任务恢复、代理凭据加密和导出下载；桌面版及 CDN 更新渠道保持独立。部署步骤与验收范围见 [服务端说明](docs/server/README.md)。
 
 准备 Windows 10/11 x64、PowerShell 7、Rust MSVC、Node.js 24、Visual Studio C++ 桌面构建工具及 Windows SDK。首次构建需联网获取锁定依赖。
 
@@ -56,7 +56,7 @@ cargo fetch --manifest-path crates/Cargo.toml --locked --target x86_64-pc-window
 
 继续使用 `%LOCALAPPDATA%/DouyinLiveMonitor`，保留应用标识和已有数据库。首次安装列表为空。旧代理配置按原 Windows 用户的 DPAPI 格式读取并保护；旧登录字段不解密、不发送、不对界面暴露。调试请设置独立 `DOUYIN_MONITOR_HOME`。
 
-验证包含核心归档/导出回归、旧版合成数据库与 DPAPI 配置升级、TLS/CONNECT、停止/重启、更新恢复、合成礼物过滤，以及真实游客 WSS 有界观察。性能验证使用 **300 个配置任务、50 个模拟消息连接、51 个出口和一次集中重连**；不等于抖音真实 50 房间并发验收。完整证据范围见 [0.3.0 验证](docs/engineering/VALIDATION_0.3.0.md)。
+验证包含核心归档/导出回归、旧版合成数据库与 DPAPI 配置升级、TLS/CONNECT、停止/重启、更新恢复、合成礼物过滤，以及真实游客 WSS 有界观察。性能验证使用 **300 个配置任务、50 个模拟消息连接、51 个出口和一次集中重连**；不等于抖音真实 50 房间并发验收。完整证据范围见 [0.3.1 验证](docs/engineering/VALIDATION_0.3.1.md)。
 
 ## 来源与许可
 

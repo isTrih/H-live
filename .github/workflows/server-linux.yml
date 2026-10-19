@@ -14,7 +14,7 @@ on:
       - 'compose.yaml'
       - '.dockerignore'
       - '.github/workflows/server-linux.yml'
-      - 'release-notes/0.3.0.md'
+      - 'release-notes/**'
       - 'docs/server/**'
       - 'licenses/**'
       - 'LICENSE'
@@ -54,7 +54,7 @@ jobs:
         run: |
           docker compose build server
           bash packaging/server/smoke.sh
-          docker image inspect h-live-server:0.1.0 --format '{{json .RepoDigests}}' > image-digests.json
+          docker image inspect h-live-server:0.1.1 --format '{{json .RepoDigests}}' > image-digests.json
       - name: Exercise current image as a single application container
         env:
           H_LIVE_EPHEMERAL_CI: '1'
@@ -64,18 +64,20 @@ jobs:
           mkdir -p server-release
           docker run --rm -v "$PWD:/src" -w /src rust:1.99.1-bookworm \
             cargo run --manifest-path crates/Cargo.toml --locked -p h-live-runtime --features test-support --example benchmark -- /tmp/offline-capacity.json > server-release/offline-capacity.json
-          test -r server-release/offline-capacity.json
+          jq -e '.ok and .configured_tasks == 300 and .peak_connections == 50 and .gift_rows == 0 and .all_connections_closed and .all_workers_stopped' server-release/offline-capacity.json
       - name: Package Docker image and deployment kit
         run: |
           mkdir -p server-release
-          docker save h-live-server:0.1.0 | gzip -1 > server-release/h-live-server-0.1.0-linux-amd64.docker.tar.gz
-          tar --exclude='.git' -czf server-release/h-live-server-0.1.0-deploy.tar.gz compose.yaml packaging/server/Dockerfile docs/server LICENSE DISCLAIMER.md
-          (cd server-release && sha256sum *.gz > SHA256SUMS)
-          printf '{"commit":"%s","version":"0.1.0","platform":"linux-amd64"}\n' "$GITHUB_SHA" > server-release/build-info.json
+          docker save h-live-server:0.1.1 | gzip -1 > server-release/h-live-server-0.1.1-linux-amd64.docker.tar.gz
+          tar --exclude='.git' -czf server-release/h-live-server-0.1.1-deploy.tar.gz compose.yaml packaging/server/Dockerfile packaging/server/docker-single docs/server release-notes/server-0.1.1.md LICENSE DISCLAIMER.md
+          tar -czf server-release/h-live-server-0.1.1-docker-single.tar.gz packaging/server/docker-single docs/server release-notes/server-0.1.1.md LICENSE DISCLAIMER.md
+          printf '{"commit":"%s","version":"0.1.1","platform":"linux-amd64"}\n' "$GITHUB_SHA" > server-release/build-info.json
           cp image-digests.json server-release/
+          printf '{"commit":"%s","version":"0.1.1","engine":"docker","container_count":1,"result":"passed","ci_url":"https://github.com/%s/actions/runs/%s","scope":"Linux regression, current production image single-container lifecycle and simulated capacity; no real-room 24-hour guarantee"}\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > server-release/server-validation.json
+          (cd server-release && sha256sum *.gz *.json > SHA256SUMS)
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: h-live-server-0.1.0-linux-amd64
+          name: h-live-server-0.1.1-linux-amd64
           path: server-release/
           retention-days: 30
           if-no-files-found: error

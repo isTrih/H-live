@@ -1,11 +1,7 @@
 name: Server Docker Single
+# Server Linux already tests and packages its freshly built single-container image.
+# This manual workflow is a focused recheck of the current source.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'packaging/server/docker-single/**'
-      - 'docs/server/DOCKER_SINGLE.md'
-      - '.github/workflows/server-docker-single.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,32 +11,17 @@ concurrency:
 jobs:
   docker:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: {persist-credentials: false}
-      - name: Check scripts and load verified release image
+      - name: Build the current source image
         run: |
           set -euo pipefail
           for script in packaging/server/docker-single/*.sh; do bash -n "$script"; done
           shellcheck packaging/server/docker-single/*.sh
-          curl --fail --location --retry 3 -o /tmp/h-live-image.tar.gz https://github.com/isTrih/H-live/releases/download/server-v0.1.0/h-live-server-0.1.0-linux-amd64.docker.tar.gz
-          echo '02181250d1fda167368df810fb629d54453d33fd5f15b0418904c2044300cd05  /tmp/h-live-image.tar.gz' | sha256sum -c -
-          docker load -i /tmp/h-live-image.tar.gz
+          docker build -t h-live-server:0.1.1 -f packaging/server/Dockerfile .
       - name: Single application container lifecycle
         env:
           H_LIVE_EPHEMERAL_CI: '1'
         run: bash packaging/server/docker-single/smoke.sh
-      - name: Package single-container deployment kit
-        run: |
-          set -euo pipefail
-          mkdir docker-single-release
-          tar -czf docker-single-release/h-live-server-0.1.0-docker-single.tar.gz packaging/server/docker-single docs/server LICENSE DISCLAIMER.md
-          printf '{"commit":"%s","image_sha256":"02181250d1fda167368df810fb629d54453d33fd5f15b0418904c2044300cd05","platform":"ubuntu-24.04-linux-amd64","engine":"docker","container_count":1,"result":"passed","scope":"synthetic data; no real room connections"}\n' "$GITHUB_SHA" > docker-single-release/docker-single-validation.json
-          (cd docker-single-release && sha256sum *.gz *.json > DOCKER-SINGLE-SHA256SUMS)
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: h-live-server-0.1.0-docker-single
-          path: docker-single-release/
-          retention-days: 30
-          if-no-files-found: error

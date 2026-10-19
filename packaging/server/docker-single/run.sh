@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Docker Engine only; no Compose, Podman, sidecar or initialization container.
 set -euo pipefail
-image=h-live-server:0.1.0
+image=h-live-server:0.1.1
 name=${H_LIVE_CONTAINER_NAME:-h-live}
 data_volume=${H_LIVE_DATA_VOLUME:-h-live-data}
 secret_volume=${H_LIVE_SECRET_VOLUME:-h-live-secrets}

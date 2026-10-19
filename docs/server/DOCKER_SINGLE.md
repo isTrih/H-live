@@ -1,6 +1,6 @@
 # Docker 单容器部署
 
-默认方案采用 **Docker Engine + 一个应用容器**，使用现有 server 0.1.0 镜像。网页、Salvo API、采集、SQLite、归档分析和导出都由同一个 Rust 服务承载。无需 Compose、Podman、独立网页容器或初始化容器。
+默认方案采用 **Docker Engine + 一个应用容器**，使用现有 server 0.1.1 镜像。网页、Salvo API、采集、SQLite、归档分析和导出都由同一个 Rust 服务承载。无需 Compose、Podman、独立网页容器或初始化容器。
 
 默认数据库为 SQLite，`messages.sqlite3` 及其 WAL、任务状态、导出文件保存在**容器外的 Docker 持久化卷**中。删除/替换应用容器不删除该卷。SQLite 是文件数据库，没有独立 SQLite 服务容器。未来可以增加连接外部 PostgreSQL 的可选存储后端；**当前尚未实现 PostgreSQL**，不是可直接填写连接串启用的功能。
 
@@ -8,16 +8,17 @@
 
 需要 Linux amd64、Docker Engine 和 Bash，Docker 已配置开机启动。当前 Windows 开发主机无需安装 Docker。服务端镜像已含网页和 Rust 程序，运行时不需要 Rust、Node 或 Python。
 
-从 [server-v0.1.0 发布页](https://github.com/isTrih/H-live/releases/tag/server-v0.1.0) 下载：
+从 [server-v0.1.1 发布页](https://github.com/isTrih/H-live/releases/tag/server-v0.1.1) 下载：
 
-- `h-live-server-0.1.0-linux-amd64.docker.tar.gz` 与 `SHA256SUMS`：原发行镜像及其校验清单。
-- `h-live-server-0.1.0-docker-single.tar.gz` 与 `DOCKER-SINGLE-SHA256SUMS`：新增的单容器部署脚本及校验清单。
+- `h-live-server-0.1.1-linux-amd64.docker.tar.gz`：本版 Linux amd64 镜像。
+- `h-live-server-0.1.1-docker-single.tar.gz`：本版单容器部署脚本。
+- `SHA256SUMS`：镜像、部署脚本、构建信息和验收报告的统一校验清单。
 
 校验对应文件的 SHA256 后执行：
 
 ```sh
-docker load -i h-live-server-0.1.0-linux-amd64.docker.tar.gz
-tar -xzf h-live-server-0.1.0-docker-single.tar.gz
+docker load -i h-live-server-0.1.1-linux-amd64.docker.tar.gz
+tar -xzf h-live-server-0.1.1-docker-single.tar.gz
 bash packaging/server/docker-single/run.sh
 ```
 
