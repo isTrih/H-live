@@ -4,6 +4,7 @@ import "./session-quality.css";
 import { icon, esc, num } from "./presentation.js";
 import { active, live, offline, faulty, status, selectAnchors, duration, viewerCount, compactViewerCount, pcUnsupported, messageConnection } from "./features/monitor/model.js";
 import { activityView } from './features/monitor/activities.js';
+import { paintClock } from './features/monitor/flip-clock.js';
 import { invoke as nativeInvoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./style.css";
@@ -417,7 +418,8 @@ function renderCard(a) {
     return `<span class="activity-indicator ${view.state}" title="${esc(view.label)}" data-action="detail" data-rid="${esc(a.rid)}"><img src="${kind === 'red_packet' ? redPacketUrl : lotteryBagUrl}" alt="${esc(view.label)}" width="22" height="22"><i></i></span>`;
   };
   const indicators = indicator('red_packet') + indicator('lottery');
-  return `<article class="monitor-card ${pcUnsupported(a) ? "unsupported" : live(a) ? "live" : offline(a) ? "offline" : faulty(a) ? "faulty" : "pending"} ${state.selected.has(a.rid) ? "checked" : ""}" data-rid="${esc(a.rid)}"><button class="card-opener" data-action="detail" data-rid="${esc(a.rid)}" aria-label="查看${esc(a.name || a.rid)}"></button><div class="card-heading"><span class="card-identity">${indicators ? `<span class="activity-indicators">${indicators}</span>` : ''}<span class="anchor-name" title="${esc(a.name || a.rid)}">${esc(a.name || a.rid)}</span></span><span class="status ${statusClass}"><i class="dot"></i><span class="status-label">${statusText}</span></span>${state.selecting ? `<input type="checkbox" data-select="${esc(a.rid)}" aria-label="选择${esc(a.name)}" ${state.selected.has(a.rid) ? "checked" : ""}>` : ''}</div><div class="room-metrics"><div><span class="metric-label">当前在线</span><strong data-viewers="${esc(a.rid)}">—</strong></div>${activity('red_packet','本场红包')}${activity('lottery','本场福袋')}</div><div class="card-foot"><span class="card-duration" title="当前场次累计监控时长，停止期间不计入"><span data-duration="${esc(a.rid)}">—</span></span>${taskActions(a, true)}</div></article>`;
+  const clock = live(a) ? `<span class="flip-clock" data-duration="${esc(a.rid)}" role="timer" aria-live="off" title="当前场次累计监控时长，停止期间不计入">—</span>` : '';
+  return `<article class="monitor-card ${pcUnsupported(a) ? "unsupported" : live(a) ? "live" : offline(a) ? "offline" : faulty(a) ? "faulty" : "pending"} ${state.selected.has(a.rid) ? "checked" : ""}" data-rid="${esc(a.rid)}"><button class="card-opener" data-action="detail" data-rid="${esc(a.rid)}" aria-label="查看${esc(a.name || a.rid)}"></button><div class="card-heading"><span class="card-identity">${indicators ? `<span class="activity-indicators">${indicators}</span>` : ''}<span class="anchor-name" title="${esc(a.name || a.rid)}">${esc(a.name || a.rid)}</span></span><span class="card-live-state"><span class="status ${statusClass}"><i class="dot"></i><span class="status-label">${statusText}</span></span>${clock}</span>${state.selecting ? `<input type="checkbox" data-select="${esc(a.rid)}" aria-label="选择${esc(a.name)}" ${state.selected.has(a.rid) ? "checked" : ""}>` : ''}</div><div class="room-metrics"><div><span class="metric-label">当前在线</span><strong data-viewers="${esc(a.rid)}">—</strong></div>${activity('red_packet','本场红包')}${activity('lottery','本场福袋')}</div><div class="card-foot">${taskActions(a, true)}</div></article>`;
 }
 function replaceContent(el, html) {
   if (!el) return;
@@ -469,7 +471,11 @@ function renderTasks() {
     if (root.scrollTop !== previousScroll) scheduleTasks();
   }
   const byRid = new Map(filtered.map(a => [a.rid, a]));
-  root.querySelectorAll('[data-duration]').forEach(el => { el.textContent = duration(byRid.get(el.dataset.duration)); });
+  root.querySelectorAll('[data-duration]').forEach(el => {
+    const value = duration(byRid.get(el.dataset.duration));
+    if (el.classList.contains('flip-clock')) paintClock(el, value);
+    else el.textContent = value;
+  });
   root.querySelectorAll('[data-viewers]').forEach(el => {
     const anchor = byRid.get(el.dataset.viewers);
     el.textContent = el.closest('.room-metrics') ? compactViewerCount(anchor) : viewerCount(anchor);
