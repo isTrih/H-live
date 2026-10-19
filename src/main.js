@@ -19,6 +19,8 @@ import { updatePanelMarkup, renderUpdatePanel, releaseNotesMarkup, bundledReleas
 import { getUpdaterState, subscribeUpdater, checkForUpdates, installUpdate } from "./updater.js";
 import { createSessionQuality } from "./session-quality.js";
 import { createAutomaticUpdates, automaticUpdatesEnabled, saveAutomaticUpdates } from "./automatic-updates.js";
+import { proxyAssignments } from "./proxy-assignment.js";
+import "./workspace.css";
 const SERVER_MODE = import.meta.env.MODE === "server";
 let invoke = nativeInvoke;
 
@@ -50,6 +52,8 @@ const state = {
   proxy: {},
   proxyRefreshRequest: false,
   proxyConfigBusy: false,
+  proxySearch: "",
+  proxyPage: 0,
   cursor: 0,
   messages: [],
   logs: [],
@@ -84,7 +88,8 @@ let bridge = (method, params = {}) =>
   invoke("backend_request", { method, params });
 const messageFeed=createRecentMessages({bridge:(...args)=>bridge(...args),getFilter:()=>({active:state.page==="messages",paused:state.paused,type:state.messageType,web_rid:state.messageAnchor}),onChange:()=>renderMessages()});
 const viewerRefresh=createViewerRefresh({bridge:(...args)=>bridge(...args),changed:()=>renderViewerRefresh(),notify:toast});
-const sessionQuality = createSessionQuality({state, bridge:(method,params)=>bridge(method,params), invoke:(...args)=>invoke(...args), toast});
+const sessionQuality = createSessionQuality({state, bridge:(method,params)=>bridge(method,params), invoke:(...args)=>invoke(...args), toast,
+  onContext: label => { if (state.modal?.kind === "detail") { state.modal.sessionLabel = label; renderDetailTitle(); } }});
 const automaticUpdates = createAutomaticUpdates({check:checkForUpdates,getState:getUpdaterState,
   onAvailable:update=>toast(`发现新版本 ${update.version}，可在设置中查看并安装`)});
 async function prepareBridge() {
@@ -162,6 +167,7 @@ function heading(_eyebrow, title, _desc, actions = "") {
 }
 function renderPage() {
   const p = document.querySelector("#page");
+  p.className = `page-${state.page}`;
   document.querySelector(".main").classList.toggle("monitor-view", state.page === "monitor");
   document
     .querySelectorAll(".nav-btn")
@@ -205,7 +211,7 @@ function renderPage() {
         "选择主播与月份，导出完整场次消息，供内容质量分析使用。",
         `<button class="danger" data-action="delete-archive">${icon("trash")}删除记录</button>`,
       ) +
-      `<div class="two-column"><section class="panel"><div class="panel-header"><h2 class="panel-title">导出消息</h2><span class="badge">UTC+8</span></div><div class="form-panel"><div class="field-row"><div class="field"><label for="export-month">导出月份</label><input id="export-month" type="month" value="${esc(state.exportMonth)}"></div><div class="field"><label>文件格式</label><div class="segment"><button class="${state.exportFormat === "xlsx" ? "active" : ""}" data-action="export-format" data-format="xlsx">XLSX</button><button class="${state.exportFormat === "csv" ? "active" : ""}" data-action="export-format" data-format="csv">CSV</button></div></div></div><div class="field"><div class="picker-heading"><span class="field-label">选择主播 <span class="muted" id="export-selected-count"></span></span><button class="small quiet" data-action="select-export-all">选择全部</button></div><label class="search">${icon("search")}<input id="export-search" placeholder="搜索已归档主播" value="${esc(state.exportSearch)}" aria-label="搜索已归档主播"></label><div id="anchor-picker" class="anchor-picker"></div></div><div class="field"><label>消息类型</label><div class="type-checks">${Object.entries(
+      `<div class="archive-layout"><section class="panel archive-form"><div class="panel-header"><h2 class="panel-title">导出消息</h2></div><div class="form-panel"><div class="field-row"><div class="field"><label for="export-month">月份</label><input id="export-month" type="month" value="${esc(state.exportMonth)}"></div><div class="field"><label>文件格式</label><div class="segment"><button class="${state.exportFormat === "xlsx" ? "active" : ""}" data-action="export-format" data-format="xlsx">XLSX</button><button class="${state.exportFormat === "csv" ? "active" : ""}" data-action="export-format" data-format="csv">CSV</button></div></div></div><div class="field"><div class="picker-heading"><span class="field-label">主播 <span class="muted" id="export-selected-count"></span></span><button class="small" data-action="select-export-all">全选</button></div><label class="search">${icon("search")}<input id="export-search" placeholder="搜索主播名称或 ID" value="${esc(state.exportSearch)}" aria-label="搜索已归档主播"></label><div id="anchor-picker" class="anchor-picker"></div></div><div class="field"><label>消息类型</label><div class="type-checks">${Object.entries(
         TYPES,
       )
         .map(
@@ -214,7 +220,7 @@ function renderPage() {
         )
         .join(
           "",
-        )}</div></div><p class="help">发送时间缺失时留空，按接收月份归档。</p><p class="help export-layout" id="export-layout-summary"></p><button class="primary" data-action="export" style="width:100%;margin-top:20px" ${state.exportBusy ? "disabled" : ""}>${icon("download")}选择保存位置并导出</button></div></section><div><section class="panel" style="margin-bottom:20px"><div class="panel-header"><h2 class="panel-title">导出字段</h2><span class="badge">7 列</span></div><div class="form-panel">${[
+        )}</div></div><div class="export-submit"><p class="help export-layout" id="export-layout-summary"></p><button class="primary" data-action="export" ${state.exportBusy ? "disabled" : ""}>${icon("download")}导出文件</button></div></div></section><aside class="archive-aside"><section class="panel"><div class="panel-header"><h2 class="panel-title">导出记录</h2></div><div id="export-jobs"></div></section><details class="panel export-schema"><summary>导出字段 · 7 列</summary><div class="form-panel">${[
         ["主播", "主播名称"],
         ["直播间场次", "真实场次 ID"],
         ["发消息人 ID", "按文本保留，避免数字精度丢失"],
@@ -229,7 +235,7 @@ function renderPage() {
         )
         .join(
           "",
-        )}</div></section><section class="panel"><div class="panel-header"><h2 class="panel-title">导出记录</h2></div><div id="export-jobs"></div></section></div></div>`;
+        )}<p class="help">时间使用北京时间。发送时间缺失时留空，按接收月份归档。</p></div></details></aside></div>`;
     renderArchivePicker();
     renderJobs();
   } else if (state.page === "proxy") {
@@ -238,15 +244,13 @@ function renderPage() {
         "",
         "代理池",
         "",
-        `<label class="switch-label"><input type="checkbox" id="proxy-enabled" ${state.settings.proxy_enabled ? "checked" : ""}>启用代理</label><button data-action="subscribe-proxy">${icon("network")}URL 订阅</button><button data-action="import-proxy">${icon("plus")}导入代理</button><button class="primary" data-action="refresh-proxy">${icon("refresh")}获取并检测 50 个</button>`,
+        `<button data-action="subscribe-proxy">${icon("network")}添加订阅</button><button data-action="import-proxy">${icon("plus")}导入代理</button><button class="primary" data-action="refresh-proxy">${icon("refresh")}获取并检测</button>`,
       ) +
-      `<div class="proxy-source-row"><label for="proxy-source">代理来源</label><select id="proxy-source"><option value="public">公共代理池 · SCDN</option><option value="imported">已导入 / URL 订阅</option></select><label class="switch-label"><input type="checkbox" id="proxy-direct">直连参与均衡</label><button data-action="manage-proxies">${icon("list")}管理已导入代理</button></div><div class="proxy-summary" id="proxy-summary"></div><p id="proxy-batch" class="help" role="status" hidden></p><div id="proxy-error"></div><section class="panel proxy-section"><div class="panel-header"><h2 class="panel-title">出口负载</h2><span class="badge" id="proxy-source-label"></span></div><div id="proxy-routes"></div></section><section class="panel proxy-section" id="proxy-subscriptions-panel" hidden><div class="panel-header"><h2 class="panel-title">URL 订阅</h2></div><div id="proxy-subscriptions"></div></section><section class="panel"><div class="panel-header"><h2 class="panel-title">直播间分配</h2></div><div id="proxy-leases"></div></section><p class="help" id="proxy-help"></p>`;
+      `<section class="proxy-configuration"><label class="switch-label"><input type="checkbox" id="proxy-enabled" ${state.settings.proxy_enabled ? "checked" : ""}>启用代理</label><div class="source-control"><label for="proxy-source">来源</label><select id="proxy-source"><option value="public">公共代理池 · SCDN</option><option value="imported">已导入 / URL 订阅</option></select></div><label class="switch-label"><input type="checkbox" id="proxy-direct">同时使用本机直连</label><button data-action="manage-proxies">管理代理</button></section><div class="proxy-summary" id="proxy-summary"></div><p id="proxy-batch" class="help" role="status" hidden></p><div id="proxy-error"></div><section class="panel proxy-section"><div class="panel-header"><h2 class="panel-title">出口负载</h2><span class="badge" id="proxy-source-label"></span></div><div id="proxy-routes"></div></section><section class="panel proxy-section" id="proxy-subscriptions-panel" hidden><div class="panel-header"><h2 class="panel-title">URL 订阅</h2></div><div id="proxy-subscriptions"></div></section><details class="panel proxy-assignments"><summary>任务分配 <span id="proxy-assignment-count"></span></summary><div class="toolbar"><label class="search">${icon("search")}<input id="proxy-search" placeholder="搜索主播或出口" aria-label="搜索任务分配" value="${esc(state.proxySearch)}"></label><div id="proxy-assignment-pages" class="assignment-pages"></div></div><div id="proxy-leases"></div></details><p class="help" id="proxy-help"></p>`;
     renderProxy();
   } else if (state.page === "settings") {
     p.innerHTML =
-      heading("", "设置", "") + (SERVER_MODE ? `<section class="panel form-panel"><div class="setting-title"><h2>H-live 服务端</h2></div><button data-action="server-logout">退出管理端</button></section>` : updatePanelMarkup(icon)) +
-      `<section class="panel form-panel appearance-panel"><div class="setting-title"><h2>界面字体</h2></div><label class="font-setting"><select id="ui-font" aria-label="界面字体"><option value="douyin" ${state.font === "douyin" ? "selected" : ""}>抖音美好体 · 默认</option><option value="chill" ${state.font === "chill" ? "selected" : ""}>寒蝉半圆体</option></select><span>直播的每一刻，都清晰可见。0123456789</span></label></section>` +
-      `<div class="two-column"><section class="panel form-panel setting-block"><div class="setting-title"><h2>${SERVER_MODE ? "服务器数据" : "本地数据"}</h2></div><div class="kv"><span>消息归档</span><strong>按主播 / 场次保存</strong></div><div class="kv"><span>运行日志</span><strong>独立存储</strong></div><button data-action="open-data" style="margin-top:16px">${icon("folder")}打开数据目录</button></section><section class="panel form-panel"><div class="setting-title"><h2>原生采集</h2></div><div id="runtime-metrics"></div></section></div>`;
+      heading("", "设置", "") + `<div class="settings-layout"><section class="panel settings-section appearance-panel"><div class="setting-row"><div><h2>界面字体</h2><p>主播名称与消息内容 · 0123456789</p></div><select id="ui-font" aria-label="界面字体"><option value="douyin" ${state.font === "douyin" ? "selected" : ""}>抖音美好体 · 默认</option><option value="chill" ${state.font === "chill" ? "selected" : ""}>寒蝉半圆体</option></select></div></section><section class="panel settings-section"><div class="setting-row"><div><h2>${SERVER_MODE ? "服务器数据" : "本地数据"}</h2><p>消息按主播和场次归档，运行日志单独保存。</p></div>${SERVER_MODE ? "" : `<button data-action="open-data">${icon("folder")}打开数据目录</button>`}</div><div class="settings-runtime"><h3>运行状态</h3><div id="runtime-metrics"></div></div></section>${SERVER_MODE ? `<section class="panel settings-section"><div class="setting-row"><div><h2>管理会话</h2><p>退出管理端后，服务器继续监控。</p></div><button data-action="server-logout">退出管理端</button></div></section>` : updatePanelMarkup(icon)}</div>`;
     renderRuntime();
   }
 }
@@ -279,7 +283,7 @@ function renderProxy() {
       ? `${batch.active ? "本批" : "上批"}已检测 ${num(batch.checked)} / ${num(batch.target || 50)} · 首页通过 ${num(batch.passed)} · 失败 ${num(batch.failed)}${batch.detail ? ` · ${batch.detail}` : ""}`
       : "";
   }
-  el.innerHTML = [
+  const summary = [
     ["首页通过", p.available],
     ["已分配任务", p.assigned],
     ["检测中", p.checking],
@@ -290,6 +294,7 @@ function renderProxy() {
         `<div class="proxy-number"><span>${label}</span><strong>${value === undefined ? "—" : num(value)}</strong></div>`,
     )
     .join("");
+  replaceContent(el, summary);
   const enabled = document.querySelector("#proxy-enabled");
   if (enabled) enabled.disabled = state.proxyConfigBusy;
   if (enabled && !enabled.disabled)
@@ -305,31 +310,32 @@ function renderProxy() {
       : "";
   const routes = p.routes || [];
   const routeStates = { ready: "可分配", active: "使用中", cooling: "冷却中", cooldown: "冷却中", checking: "检测中", draining: "待连接结束", suspended: "暂停分配", failed: "待处理", unavailable: "不可分配" };
-  document.querySelector("#proxy-routes").innerHTML = routes.length
+  replaceContent(document.querySelector("#proxy-routes"), routes.length
     ? `<div class="table-wrap proxy-route-table"><table><thead><tr><th>出口</th><th>任务数</th><th>正在建连</th><th>状态</th></tr></thead><tbody>${routes.map(r => `<tr><td class="mono">${esc(r.kind === "direct" ? "本机直连" : r.endpoint)}</td><td>${num(r.assigned_tasks)}</td><td>${num(r.connecting)}</td><td>${esc(routeStates[r.state] || r.state || "可分配")}${r.cooldown_seconds > 0 ? ` · ${num(Math.ceil(r.cooldown_seconds))} 秒` : ""}</td></tr>`).join("")}</tbody></table></div>`
-    : empty("暂无出口负载", "开始监控后按出口均衡分配，正常连接保持稳定。", "network");
+    : empty("暂无出口负载", "开始监控后可查看各出口的任务和连接状态。", "network"));
   const subscriptions = p.subscriptions || [];
   document.querySelector("#proxy-subscriptions-panel").hidden = subscriptions.length === 0;
-  document.querySelector("#proxy-subscriptions").innerHTML = subscriptions.map(s => `<div class="proxy-subscription-row"><div><strong>${esc(s.label)}</strong><small>${num(s.count)} 个候选 · 每 ${num(s.interval_minutes)} 分钟刷新${s.updated_at ? ` · 上次 ${esc(time(s.updated_at))}` : ""}</small>${s.error ? `<small class="danger">${esc(s.error)}</small>` : ""}</div><span class="badge">${esc({ queued: "等待刷新", refreshing: "刷新中", ready: "已同步", error: "刷新失败", idle: "等待刷新" }[s.state] || "等待刷新")}</span><button class="icon-btn quiet" data-action="refresh-subscription" data-id="${esc(s.id)}" title="刷新订阅" aria-label="刷新 ${esc(s.label)}" ${["queued", "refreshing"].includes(s.state) ? "disabled" : ""}>${icon("refresh")}</button><button class="icon-btn quiet danger" data-action="remove-subscription" data-id="${esc(s.id)}" title="移除订阅" aria-label="移除 ${esc(s.label)}">${icon("trash")}</button></div>`).join("");
+  replaceContent(document.querySelector("#proxy-subscriptions"), subscriptions.map(s => `<div class="proxy-subscription-row"><div><strong>${esc(s.label)}</strong><small>${num(s.count)} 个候选 · 每 ${num(s.interval_minutes)} 分钟刷新${s.updated_at ? ` · 上次 ${esc(time(s.updated_at))}` : ""}</small>${s.error ? `<small class="danger">${esc(s.error)}</small>` : ""}</div><span class="badge">${esc({ queued: "等待刷新", refreshing: "刷新中", ready: "已同步", error: "刷新失败", idle: "等待刷新" }[s.state] || "等待刷新")}</span><button class="icon-btn quiet" data-action="refresh-subscription" data-id="${esc(s.id)}" title="刷新订阅" aria-label="刷新 ${esc(s.label)}" ${["queued", "refreshing"].includes(s.state) ? "disabled" : ""}>${icon("refresh")}</button><button class="icon-btn quiet danger" data-action="remove-subscription" data-id="${esc(s.id)}" title="移除订阅" aria-label="移除 ${esc(s.label)}">${icon("trash")}</button></div>`).join(""));
   const leases = Array.isArray(p.leases)
     ? p.leases
     : state.anchors
         .filter((a) => a.proxy)
         .map((a) => ({ rid: a.rid, proxy: a.proxy }));
-  document.querySelector("#proxy-leases").innerHTML = leases.length
-    ? `<div class="table-wrap"><table class="proxy-table"><thead><tr><th>主播</th><th>代理地址</th><th>延迟</th><th>状态</th></tr></thead><tbody>${leases
+  const assignment = proxyAssignments(leases, state.anchors, state.proxySearch, state.proxyPage);
+  state.proxyPage = assignment.page;
+  document.querySelector("#proxy-assignment-count").textContent = num(leases.length);
+  replaceContent(document.querySelector("#proxy-assignment-pages"), `<span>${assignment.first}–${assignment.last} / ${num(assignment.total)}</span><button class="small" data-action="proxy-prev" ${assignment.page === 0 ? "disabled" : ""}>上一页</button><button class="small" data-action="proxy-next" ${assignment.page + 1 >= assignment.pages ? "disabled" : ""}>下一页</button>`);
+  replaceContent(document.querySelector("#proxy-leases"), assignment.items.length
+      ? `<div class="table-wrap"><table class="proxy-table"><thead><tr><th>主播</th><th>出口</th><th>延迟</th><th>状态</th></tr></thead><tbody>${assignment.items
         .map((l) => {
-          const a = state.anchors.find((x) => x.rid === l.rid) || {};
-          return `<tr><td><span class="anchor-name">${esc(a.name || l.rid)}</span><span class="anchor-id">${esc(l.rid)}</span></td><td class="mono">${esc(l.kind === "direct" || l.proxy === "direct" ? "本机直连" : l.proxy || l.endpoint || "—")}</td><td>${l.latency_ms !== undefined ? `${Math.round(l.latency_ms)} ms` : "—"}</td><td><span class="status online">已分配</span></td></tr>`;
+          return `<tr><td><span class="anchor-name">${esc(l.name)}</span><span class="anchor-id">${esc(l.rid)}</span></td><td class="mono">${esc(l.kind === "direct" || l.proxy === "direct" ? "本机直连" : l.proxy || l.endpoint || "—")}</td><td>${l.latency_ms !== undefined ? `${Math.round(l.latency_ms)} ms` : "—"}</td><td><span class="status online">已分配</span></td></tr>`;
         })
         .join("")}</tbody></table></div>`
     : empty(
-        "暂无代理分配",
-        state.settings.proxy_enabled
-          ? "开始监控后自动获取并分配代理。"
-          : "启用代理后开始监控。",
+        state.proxySearch ? "没有匹配的任务" : "暂无任务分配",
+        state.proxySearch ? "试试主播名称、直播间 ID 或出口地址。" : "开始监控后可查看任务使用的出口。",
         "network",
-      );
+      ));
 }
 async function loadProxy() {
   try {
@@ -376,7 +382,7 @@ function renderStats() {
     off = a.filter(offline).length,
     err = a.filter(faulty).length,
     unknown = a.length - online - off - err;
-  el.innerHTML =
+  replaceContent(el,
     [
       ["开播中", online, "live"],
       ["未开播", off, "offline"],
@@ -388,7 +394,7 @@ function renderStats() {
           `<div class="summary-item ${cls}"><span class="summary-label"><i class="dot"></i>${label}</span><strong>${num(value)}</strong></div>`,
       )
       .join("") +
-    `<div class="summary-item total"><span class="summary-label">已收消息</span><strong>${num(state.metrics.total_messages ?? a.reduce((n, x) => n + (x.message_count || 0), 0))}</strong></div>`;
+    `<div class="summary-item total"><span class="summary-label">已收消息</span><strong>${num(state.metrics.total_messages ?? a.reduce((n, x) => n + (x.message_count || 0), 0))}</strong></div>`);
 }
 function filteredAnchors() {
   return selectAnchors(state.anchors, state.search, state.filter);
@@ -401,6 +407,7 @@ function renderCard(a) {
   return `<article class="monitor-card ${pcUnsupported(a) ? "unsupported" : live(a) ? "live" : offline(a) ? "offline" : faulty(a) ? "faulty" : "pending"} ${state.selected.has(a.rid) ? "checked" : ""}" data-rid="${esc(a.rid)}"><button class="card-opener" data-action="detail" data-rid="${esc(a.rid)}" aria-label="查看${esc(a.name || a.rid)}"></button><div class="card-top"><span class="status ${statusClass}"><i class="dot"></i>${statusText}${live(a) ? `<span class="live-duration" title="当前场次累计监控时长，停止期间不计入" data-duration="${esc(a.rid)}">—</span>` : ""}</span>${state.selecting ? `<input type="checkbox" data-select="${esc(a.rid)}" aria-label="选择${esc(a.name)}" ${state.selected.has(a.rid) ? "checked" : ""}>` : ""}</div><div class="card-main">${avatar(a)}<span class="card-title"><span class="anchor-name" title="${esc(a.name || a.rid)}">${esc(a.name || a.rid)}</span></span></div><div class="card-audience"><span>${pcUnsupported(a) ? messageConnection(a) : "当前在线"}</span><strong data-viewers="${esc(a.rid)}">—</strong></div><div class="card-foot">${taskActions(a)}</div></article>`;
 }
 function replaceContent(el, html) {
+  if (!el) return;
   if (el._renderedHTML === html) return;
   const focused = el.contains(document.activeElement) ? document.activeElement : null;
   const key = focused?.dataset.select ? `[data-select="${CSS.escape(focused.dataset.select)}"]`
@@ -470,7 +477,7 @@ function renderMessages() {
         (!state.messageAnchor || m.rid === state.messageAnchor),
     )
     .slice(0,150);
-  root.innerHTML = rows.length
+  const html = rows.length
     ? `<div class="table-wrap"><table><thead><tr><th>发送时间</th><th>主播 / 场次</th><th>发消息人</th><th>类型</th><th>消息内容</th></tr></thead><tbody>${rows.map((m) => {
       const kind = m.msg_type || m.message_type;
       const activity = kind === "activity";
@@ -480,13 +487,14 @@ function renderMessages() {
       return `<tr><td class="message-time">${esc(m.time_str || (m.message_time ? time(m.message_time) : "时间未知"))}</td><td><span class="anchor-name">${esc(m.name || m.anchor_name || m.rid)}</span><span class="anchor-id">${esc(m.session_id || m.payload?.room_id || "")}</span></td><td class="sender">${esc(sender)}${senderId ? `<span class="mono">${esc(senderId)}</span>` : ""}</td><td><span class="message-type ${esc(kind)}">${esc(label)}</span></td><td class="message-content">${esc(m.content ?? m.payload?.content ?? m.text ?? "")}${m.content_truncated?'<span class="help">（完整内容见导出）</span>':""}</td></tr>`;
     }).join("")}</tbody></table></div>`
     : empty(feed.loading?"正在读取消息":feed.error?"读取消息失败":"暂无匹配消息", feed.error||"已归档的聊天与互动会按当前分类显示。", "chat");
+  replaceContent(root, html);
   document.querySelector("#message-count").textContent =
     `显示最近 ${rows.length} 条匹配消息 · ${feed.error ? "刷新失败，将自动重试" : state.paused ? "显示已暂停，采集继续" : "自动刷新"} · 完整数据请使用月度导出`;
 }
 function renderLogs() {
   const root = document.querySelector("#log-content");
-  if (root)
-    root.innerHTML = state.logs.length
+  if (!root) return;
+  const html = state.logs.length
       ? state.logs
           .slice(-200)
           .reverse()
@@ -500,6 +508,7 @@ function renderLogs() {
           "开始监控后，连接状态与错误会显示在这里。",
           "logs",
         );
+  replaceContent(root, html);
 }
 function renderArchivePicker() {
   const el = document.querySelector("#anchor-picker");
@@ -539,7 +548,7 @@ function renderExportLayout() {
 function renderJobs() {
   const el = document.querySelector("#export-jobs");
   if (!el) return;
-  el.innerHTML = state.jobs.length
+  const html = state.jobs.length
     ? state.jobs
         .slice()
         .reverse()
@@ -551,6 +560,7 @@ function renderJobs() {
         })
         .join("")
     : empty("尚无导出任务", "选择月份和主播即可生成文件。", "download");
+  replaceContent(el, html);
 }
 function renderRuntime() {
   renderUpdatePanel(state.anchors.some(active));
@@ -576,7 +586,7 @@ function updateConnection() {
   const e = document.querySelector("#connection");
   if (e) {
     e.className = `connection ${state.connected ? "" : "bad"}`;
-    e.innerHTML = `<i class="dot"></i>${state.preview ? "预览" : state.connected ? "已连接" : "未连接"}`;
+    replaceContent(e, `<i class="dot"></i>${state.preview ? "预览" : state.connected ? "已连接" : "未连接"}`);
   }
   const err = document.querySelector("#error-area");
   if (err)
@@ -591,7 +601,9 @@ function toast(message, error = false) {
   document.querySelector(".toast-stack").append(e);
   setTimeout(() => e.remove(), 6500);
 }
+let modalReturnFocus = null;
 function modal(title, body, footer = "", drawer = false) {
+  if (!document.querySelector('.modal')) modalReturnFocus = document.activeElement;
   document.querySelector("#modal-root").innerHTML =
     `<div class="overlay ${drawer ? "drawer-overlay" : ""}"><section role="dialog" aria-modal="true" aria-label="${esc(title)}" class="modal ${drawer ? "drawer" : ""}"><header class="modal-header"><h2>${esc(title)}</h2><button class="icon-btn quiet" data-action="close-modal" aria-label="关闭">${icon("close")}</button></header><div class="modal-body">${body}</div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ""}</section></div>`;
   if (state.modal?.kind === "archive-delete") document.querySelector(".modal").classList.add("archive-delete-modal");
@@ -604,6 +616,8 @@ function modal(title, body, footer = "", drawer = false) {
 function closeModal() {
   document.querySelector("#modal-root").innerHTML = "";
   state.modal = null;
+  if (modalReturnFocus?.isConnected) modalReturnFocus.focus({preventScroll:true});
+  modalReturnFocus = null;
 }
 const archiveDeletion = createArchiveDeletion({ state, bridge: (...args) => bridge(...args), modal, closeModal, toast,
   onDeleted: async () => {
@@ -705,13 +719,13 @@ async function readProxyFile(input) {
   } catch (error) { toast(String(error?.message || error), true); }
   finally { input.value = ""; }
 }
-function showDetail(rid) {
+function showDetail(rid, tab = "analysis") {
   const a = state.anchors.find((x) => x.rid === rid);
   if (!a) return;
-  state.modal = { kind: "detail", rid };
+  state.modal = { kind: "detail", rid, tab };
   modal(
-    "主播详情",
-    `<div class="drawer-identity">${avatar(a)}<div><h2>${esc(a.name)}</h2><span id="detail-status">${statusBadge(a)}</span></div></div><div class="detail-live"><span>当前在线 <strong data-detail-field="当前在线">${viewerCount(a)}</strong></span><span>累计监控 <strong data-detail-field="开播时长">${duration(a)}</strong></span></div><section id="session-quality" class="session-quality" aria-label="场次与有效发言统计"></section><details class="connection-details"><summary>连接信息</summary>${[
+    a.name,
+    `<div class="detail-overview"><div class="drawer-identity">${avatar(a)}<div><h2>${esc(a.name)}</h2><span id="detail-status">${statusBadge(a)}</span></div></div><div class="detail-live"><span>当前在线 <strong data-detail-field="当前在线">${viewerCount(a)}</strong></span><span>累计监控 <strong data-detail-field="开播时长">${duration(a)}</strong></span></div></div><div class="detail-tabs" role="tablist" aria-label="主播详情">${[["analysis","场次分析"],["connection","连接信息"],["preferences","主播设置"]].map(([id,label])=>`<button role="tab" id="detail-tab-${id}" aria-controls="detail-panel-${id}" aria-selected="${tab===id}" tabindex="${tab===id?0:-1}" data-action="detail-tab" data-tab="${id}">${label}</button>`).join("")}</div><div class="detail-panel" id="detail-panel-analysis" role="tabpanel" aria-labelledby="detail-tab-analysis" ${tab!=="analysis"?"hidden":""}><section id="session-quality" class="session-quality" aria-label="场次与有效发言统计"></section></div><div class="detail-panel" id="detail-panel-connection" role="tabpanel" aria-labelledby="detail-tab-connection" ${tab!=="connection"?"hidden":""}><div class="connection-grid">${[
       ["直播间入口 ID", a.rid],
       ["主播 ID", a.anchor_id || "等待识别"],
       ["当前场次", a.session_id || "等待识别"],
@@ -727,18 +741,25 @@ function showDetail(rid) {
       )
       .join(
         "",
-      )}<div class="kv"><span>代理地址</span><strong data-detail-field="代理地址">${esc(a.proxy || "未分配")}</strong></div></details><div class="pc-support-control"><strong>电脑端兼容性</strong><small>${a.pc_support_source === "detected" ? "平台已明确返回电脑端不支持提示。" : "在浏览器确认该提示后可手动标记；标记不会改变消息连接。"}</small><button class="small" data-action="set-pc-unsupported" data-rid="${esc(rid)}">${icon("display")}${pcUnsupported(a) ? "清除非 PC 支持标记" : "标记为非 PC 支持"}</button></div><div class="field"><label for="rename-value">主播显示名称</label><input id="rename-value" value="${esc(a.name)}"><button class="small" data-action="rename" data-rid="${esc(rid)}">保存名称</button></div>`,
-    `<button class="danger quiet" data-action="remove-one" data-rid="${esc(rid)}">移除任务</button><button data-action="open-live" data-rid="${esc(rid)}">打开直播间${icon("external")}</button><button id="detail-monitor-toggle" class="${active(a) ? "detail-stop" : "primary"}" data-action="${active(a) ? "stop-one" : "start-one"}" data-rid="${esc(rid)}">${icon(active(a) ? "stop" : "play")}${active(a) ? "停止监控" : "开始监控"}</button>`,
+      )}<div class="kv"><span>代理地址</span><strong data-detail-field="代理地址">${esc(a.proxy || "本机直连")}</strong></div></div></div><div class="detail-panel" id="detail-panel-preferences" role="tabpanel" aria-labelledby="detail-tab-preferences" ${tab!=="preferences"?"hidden":""}><div class="detail-setting"><h3>显示名称</h3><div class="inline-form"><input id="rename-value" aria-label="显示名称" value="${esc(a.name)}"><button data-action="rename" data-rid="${esc(rid)}">保存名称</button></div></div><div class="detail-setting"><h3>电脑端兼容性</h3><p>${a.pc_support_source === "detected" ? "平台已明确返回电脑端不支持提示。" : "在浏览器确认后手动标记，不改变消息连接状态。"}</p><button data-action="set-pc-unsupported" data-rid="${esc(rid)}">${pcUnsupported(a) ? "清除非 PC 支持标记" : "标记为非 PC 支持"}</button></div><div class="detail-setting danger-zone"><div><h3>移除监控任务</h3><p>停止监控并从看板移除，历史归档仍然保留。</p></div><button class="danger" data-action="remove-one" data-rid="${esc(rid)}">${icon("trash")}移除任务</button></div></div>`,
+    `<button data-action="open-live" data-rid="${esc(rid)}">${icon("external")}打开直播间</button><button id="detail-monitor-toggle" class="${active(a) ? "detail-stop" : "primary"}" data-action="${active(a) ? "stop-one" : "start-one"}" data-rid="${esc(rid)}">${icon(active(a) ? "stop" : "play")}${active(a) ? "停止监控" : "开始监控"}</button>`,
     false,
   );
   sessionQuality.mount(a);
 }
 
+function renderDetailTitle() {
+  if (state.modal?.kind !== "detail") return;
+  const a = state.anchors.find(x => x.rid === state.modal.rid);
+  const title = document.querySelector('.anchor-detail-dialog .modal-header h2');
+  if (a && title) title.textContent = a.name + (state.modal.tab === 'analysis' && state.modal.sessionLabel ? ` · ${state.modal.sessionLabel}` : '');
+}
 function updateDetail() {
   if (state.modal?.kind !== "detail") return;
   const a = state.anchors.find(x => x.rid === state.modal.rid);
   if (!a) return closeModal();
-  sessionQuality.tick(a);
+  renderDetailTitle();
+  if (state.modal.tab === "analysis") sessionQuality.tick(a);
   const values = {
     "直播间入口 ID": a.rid, "主播 ID": a.anchor_id || "等待识别", "当前场次": a.session_id || "等待识别",
     "本次已收消息": num(a.message_count), "开播时长": duration(a), "当前在线": viewerCount(a),
@@ -805,11 +826,11 @@ async function init() {
     updateConnection();
   }
 }
-async function poll() {
-  if (polling || !state.connected) return;
+async function poll(force = false) {
+  if (polling || !state.connected || (document.hidden && !force)) return;
   polling = true;
   try {
-    merge(await bridge("poll", { after: state.cursor, limit: 300 }));
+    merge(await bridge("poll", { after: state.cursor, limit: 300, include_proxy: false }));
     if (state.page === 'proxy' && Date.now() - proxyPolledAt > 3000) {
       proxyPolledAt = Date.now();
       state.proxy = await bridge('proxy_status');
@@ -826,7 +847,7 @@ async function poll() {
 async function request(method, params = {}, success = "") {
   const result = await bridge(method, params);
   if (success) toast(success);
-  await poll();
+  await poll(true);
   return result;
 }
 async function loadArchive() {
@@ -888,6 +909,15 @@ async function action(el) {
   const a = el.dataset.action,
     rid = el.dataset.rid;
   switch (a) {
+    case "detail-tab": {
+      if (state.modal?.kind !== "detail") return;
+      state.modal.tab = el.dataset.tab;
+      document.querySelectorAll('.detail-tabs [role="tab"]').forEach(t=>{const on=t.dataset.tab===state.modal.tab;t.setAttribute("aria-selected",String(on));t.tabIndex=on?0:-1;});
+      document.querySelectorAll('.detail-panel').forEach(p=>{p.hidden=p.id!==`detail-panel-${state.modal.tab}`;});
+      return updateDetail();
+    }
+    case "proxy-prev": state.proxyPage--; return renderProxy();
+    case "proxy-next": state.proxyPage++; return renderProxy();
     case "server-logout":
       if (SERVER_MODE) return (await import("./server/bridge.js")).logout();
       return;
@@ -996,7 +1026,7 @@ async function action(el) {
         { rids },
         start ? "监控任务已提交，将分批连接" : "停止请求已提交",
       );
-      if (state.modal?.kind === "detail") showDetail(rid);
+      if (state.modal?.kind === "detail") updateDetail();
       break;
     }
     case "remove-one":
@@ -1012,7 +1042,7 @@ async function action(el) {
       const room = state.anchors.find(x => x.rid === rid);
       await request("set_pc_unsupported", { rid, unsupported: !pcUnsupported(room || {}) });
       await init();
-      return showDetail(rid);
+      return showDetail(rid, "preferences");
     }
     case "rename":
       await request(
@@ -1021,7 +1051,7 @@ async function action(el) {
         "显示名称已保存",
       );
       await init();
-      return showDetail(rid);
+      return showDetail(rid, "preferences");
     case "pause":
       state.paused = !state.paused;
       messageFeed.setPaused(state.paused);
@@ -1143,6 +1173,7 @@ document.addEventListener("input", (e) => {
   const t = e.target;
   sessionQuality.input(t);
   if (t.id === "proxy-text") resetProxyPreview();
+  if (t.id === "proxy-search") {state.proxySearch=t.value;state.proxyPage=0;renderProxy();}
   if (t.id === "task-search") {
     state.search = t.value;
     document.querySelector("#task-content").scrollTop = 0;
@@ -1205,6 +1236,12 @@ document.addEventListener("change", (e) => {
       : state.exportTypes.delete(t.dataset.exportType);
 });
 document.addEventListener("keydown", (e) => {
+  if (e.target.matches?.('[role="tab"][data-action="detail-tab"]') && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+    const tabs = [...e.target.closest('[role="tablist"]').querySelectorAll('[role="tab"]')];
+    const index = tabs.indexOf(e.target);
+    const next = e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : (index + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+    e.preventDefault(); tabs[next].click(); tabs[next].focus();
+  }
   if (e.key === "Escape") closeModal();
   if (e.key === "Tab" && state.modal) {
     const els = [
@@ -1256,6 +1293,7 @@ async function boot() {
   await init();
   if (!state.preview && window.__TAURI_INTERNALS__ && automaticUpdatesEnabled()) automaticUpdates.start();
   window.addEventListener("beforeunload",()=>automaticUpdates.stop(),{once:true});
-  setInterval(poll, 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) void poll(true); });
+  setInterval(() => poll(), 1000);
 }
 boot();

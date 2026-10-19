@@ -18,6 +18,19 @@ fn setup() -> (tempfile::TempDir, Runtime) {
     .unwrap();
     (d, r)
 }
+#[test]
+fn slim_dashboard_poll_skips_proxy_inventory_but_keeps_collector_health() {
+    let (_d, r) = setup();
+    let full = r.request("poll", json!({})).unwrap();
+    assert!(full["metrics"]["proxy"].is_object());
+    let slim = r.request("poll", json!({"include_proxy":false})).unwrap();
+    assert!(slim["metrics"].get("proxy").is_none());
+    assert!(slim["anchors"].is_array());
+    assert!(slim["metrics"]["archive"].is_object());
+    assert!(slim["metrics"]["viewer_refresh"].is_object());
+    assert!(r.request("proxy_status", json!({})).unwrap().is_object());
+    r.shutdown().unwrap();
+}
 fn until(r: &Runtime, check: impl Fn(&Value) -> bool) -> Value {
     let deadline = Instant::now() + Duration::from_secs(12);
     loop {
@@ -28,6 +41,28 @@ fn until(r: &Runtime, check: impl Fn(&Value) -> bool) -> Value {
         assert!(Instant::now() < deadline, "{}", p["anchors"]);
         std::thread::sleep(Duration::from_millis(40));
     }
+}
+#[test]
+fn offline_poll_starts_at_thirty_seconds_restart_resets_and_live_preferences_persist() {
+    let (d, r) = setup();
+    r.request("add_anchors", json!({"values":"1\n3"})).unwrap();
+    r.request("start", json!({"rids":["1","3"]})).unwrap();
+    let p = until(&r, |p| {
+        p["anchors"][1]["state"] == "offline" && p["anchors"][0]["state"] == "connected"
+    });
+    assert_eq!(p["anchors"][1]["poll_interval_seconds"], 30);
+    assert_eq!(p["anchors"][1]["offline_checks"], 1);
+    assert!(p["anchors"][0]["poll_interval_seconds"].is_null());
+    r.request("stop", json!({"rids":["3"]})).unwrap();
+    r.request("start", json!({"rids":["3"]})).unwrap();
+    let p = until(&r, |p| p["anchors"][1]["state"] == "offline");
+    assert_eq!(p["anchors"][1]["offline_checks"], 1);
+    r.shutdown().unwrap();
+    let cache: Value =
+        serde_json::from_slice(&std::fs::read(d.path().join("polling-habits.json")).unwrap())
+            .unwrap();
+    assert_eq!(cache["aliases"]["1"], "100001");
+    assert!(cache["aliases"].get("3").is_none()); // An offline response is never a learned live slot.
 }
 #[test]
 fn production_pipeline_records_chat_ignores_decoded_gift_and_stops() {

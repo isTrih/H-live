@@ -120,6 +120,8 @@ pub(crate) async fn run(
     let mut bound_session = String::new();
     let mut accumulated = 0.;
     let mut failures = 0u32;
+    let mut offline_checks = 0u32;
+    let mut known_live = false;
     'task: while !cancel.is_cancelled() {
         if lease.as_ref().is_some_and(|l| !l.0.ready()) {
             lease = None;
@@ -150,12 +152,25 @@ pub(crate) async fn run(
             "等待出口建连名额或出口冷却结束",
         );
         let result:std::result::Result<(),net::Error>=async{
+            let query = shared.polling.acquire(&rid,known_live,offline_checks,&cancel).await.ok_or(net::Error::Cancelled)?;
             if visitor.is_none(){visitor=Some(shared.network.visitor(&route,&cancel).await?)}
             let guest=visitor.as_ref().unwrap();
             let info=shared.network.room(&route,guest,&rid,&cancel).await?;
+            drop(query); // The permit bounds status queries, never the long-lived WSS stream.
             if !shared.patch_info(&rid,generation,&info){return Err(net::Error::Cancelled)}
-            if !info.is_live {observed_offline=true;failures=0;shared.status(&rid,generation,"offline","尚未开播，60 秒后再检查");pause(60.,&cancel).await;return Ok(())}
+            known_live=info.is_live;
+            if !info.is_live {
+                observed_offline=true;failures=0;offline_checks=offline_checks.saturating_add(1);
+                let now=chrono::Utc::now().timestamp();
+                let seconds=shared.polling.next_delay(&rid,offline_checks,now);
+                shared.patch(&rid,generation,json!({"offline_checks":offline_checks,"poll_interval_seconds":seconds,"next_check_at":now+seconds as i64}));
+                shared.status(&rid,generation,"offline",&format!("尚未开播，{seconds} 秒后再检查"));
+                pause(seconds as f64,&cancel).await;return Ok(())
+            }
             if !storage::id(&info.anchor_id)||!storage::id(&info.room_id){return Err(net::Error::Invalid("无法确认真实主播或场次，暂停连接并稍后核验"))}
+            offline_checks=0;
+            shared.polling.observe_live(&rid,&info.anchor_id,chrono::Utc::now().timestamp());
+            shared.patch(&rid,generation,json!({"offline_checks":0,"poll_interval_seconds":null,"next_check_at":null}));
             let row=shared.row(&rid,generation).ok_or(net::Error::Cancelled)?;
             let params=json!({"anchor_id":info.anchor_id,"session_id":info.room_id,"anchor_name":row["name"],"web_rid":rid,"title":info.title,"started_at":info.started_at.and_then(|t|chrono::DateTime::from_timestamp(t as i64,0)).map(|t|t.to_rfc3339())});
             database(&shared,move|a|a.quality_request("register",params,CancelToken::default()).map(|_|()).map_err(|_|"场次登记失败".into())).await.map_err(|_|net::Error::Invalid("场次登记失败，已停止任务"))?;
@@ -181,6 +196,7 @@ pub(crate) async fn run(
                         match tokio::time::timeout(Duration::from_secs(5),socket.send_frame(hb_frame(),&cancel)).await{Ok(Ok(()))=>{},_=>break Err(net::Error::Network)}
                     },
                     _=checkpoints.tick()=>{
+                        shared.polling.observe_live(&rid,&info.anchor_id,chrono::Utc::now().timestamp());
                         let seconds=accumulated+began.elapsed().as_secs_f64();
                         if checkpoint(&shared,&rid,generation,seconds).await.is_err(){break Err(net::Error::Invalid("监控时长写入失败，已停止任务"))}
                         shared.patch(&rid,generation,json!({"duration_seconds":seconds,"duration_updated_at":crate::proxy::epoch_ms() as f64/1000.}));

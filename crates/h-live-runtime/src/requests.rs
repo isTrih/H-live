@@ -53,6 +53,11 @@ impl Runtime {
                 json!({"version":VERSION,"native_version":VERSION,"processing":"rust","anchors":self.anchors(),"archive_anchors":self.shared.archive.list_anchors().map_err(|_|"读取历史主播失败")?,"settings":self.settings(),"metrics":self.shared.metrics(),"cursor":self.shared.state.lock().unwrap().seq}),
             ),
             "poll" => {
+                let include_proxy = p
+                    .get("include_proxy")
+                    .map(|v| v.as_bool().ok_or("代理快照参数无效"))
+                    .transpose()?
+                    .unwrap_or(true);
                 let after = p
                     .get("after")
                     .map(|v| v.as_u64().ok_or("游标无效"))
@@ -90,7 +95,7 @@ impl Runtime {
                     (events, cursor, dropped, jobs)
                 };
                 Ok(
-                    json!({"events":events,"cursor":cursor,"dropped":dropped,"anchors":self.anchors(),"metrics":self.shared.metrics(),"export_jobs":jobs}),
+                    json!({"events":events,"cursor":cursor,"dropped":dropped,"anchors":self.anchors(),"metrics":self.shared.metrics_for(include_proxy),"export_jobs":jobs}),
                 )
             }
             "archive_anchors" => serde_json::to_value(

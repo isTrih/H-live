@@ -56,6 +56,7 @@ pub(crate) struct Shared {
     pub directory: PathBuf,
     pub cancel: CancellationToken,
     pub storage_slots: Arc<Semaphore>,
+    pub polling: crate::polling::Polling,
     pub quality_cancel: CancelToken,
     pub quality_error: AtomicBool,
     pub jobs: Mutex<Vec<JoinHandle<()>>>,
@@ -203,11 +204,32 @@ impl Shared {
         Ok(())
     }
     pub fn metrics(&self) -> Value {
-        let s = self.state.lock().unwrap();
-        let rows = s.rooms.values().map(|r| &r.value).collect::<Vec<_>>();
+        self.metrics_for(true)
+    }
+    pub(crate) fn metrics_for(&self, include_proxy: bool) -> Value {
         let archive = self.archive.metrics();
-        let pool = proxy_snapshot(&s);
-        json!({"total_messages":rows.iter().filter_map(|r|r["message_count"].as_u64()).sum::<u64>(),"active":rows.iter().filter(|r|r["active"]==true).count(),"connected":rows.iter().filter(|r|r["state"]=="connected").count(),"events_per_second":s.rates.iter().filter(|t|**t+1000>=crate::proxy::epoch_ms()).count(),"process_rss_mb":crate::process::counters()["rss_mb"],"thread_count":self.threads.load(Ordering::Acquire)+1+usize::from(archive["writer_alive"]==true),"operation_queue":0,"archive_queue":archive["queue_depth"],"archive":archive,"proxy":pool,"viewer_refresh":s.refresh,"runtime":"rust"})
+        let mut value = {
+            let s = self.state.lock().unwrap();
+            let (messages, active, connected) = s.rooms.values().fold(
+                (0u64, 0usize, 0usize),
+                |(messages, active, connected), r| {
+                    (
+                        messages + r.value["message_count"].as_u64().unwrap_or(0),
+                        active + usize::from(r.value["active"] == true),
+                        connected + usize::from(r.value["state"] == "connected"),
+                    )
+                },
+            );
+            let now = crate::proxy::epoch_ms();
+            let mut v = json!({"total_messages":messages,"active":active,"connected":connected,"events_per_second":s.rates.iter().filter(|t|**t+1000>=now).count(),"thread_count":self.threads.load(Ordering::Acquire)+1+usize::from(archive["writer_alive"]==true),"operation_queue":0,"archive_queue":archive["queue_depth"],"archive":archive,"viewer_refresh":s.refresh,"runtime":"rust"});
+            if include_proxy {
+                v["proxy"] = proxy_snapshot(&s);
+            }
+            v
+        };
+        // OS accounting must not hold the collector's shared state lock.
+        value["process_rss_mb"] = crate::process::counters()["rss_mb"].clone();
+        value
     }
 }
 pub(crate) fn records(config: &Value) -> Result<Vec<ProxyRecord>> {
@@ -351,6 +373,7 @@ impl Runtime {
                 }
             })
             .map_err(|_| "无法启动日志任务")?;
+        let polling = crate::polling::Polling::open(&directory);
         let shared = Arc::new(Shared {
             threads,
             network,
@@ -372,6 +395,7 @@ impl Runtime {
             directory,
             cancel: CancellationToken::new(),
             storage_slots: Arc::new(Semaphore::new(8)),
+            polling,
             quality_cancel: CancelToken::default(),
             quality_error: AtomicBool::new(false),
             jobs: Mutex::new(vec![]),
@@ -395,6 +419,13 @@ impl Runtime {
         Ok(instance)
     }
     fn background(&self) {
+        let shared = self.shared.clone();
+        self.background
+            .lock()
+            .unwrap()
+            .push(self.rt.spawn(async move {
+                shared.polling.run(&shared.cancel).await;
+            }));
         let shared = self.shared.clone();
         self.background
             .lock()
@@ -425,7 +456,14 @@ impl Runtime {
                     tick += 1;
                     if tick.is_multiple_of(5) {
                         let clone = shared.clone();
-                        let _ = tokio::task::spawn_blocking(move || clone.flush_metadata()).await;
+                        let _ = tokio::task::spawn_blocking(move || {
+                            let result = clone.flush_metadata();
+                            if clone.polling.flush().is_err() {
+                                clone.log("", "开播偏好缓存保存失败，下次继续重试");
+                            }
+                            result
+                        })
+                        .await;
                     }
                     crate::maintenance::tick(&shared, tick).await;
                 }
@@ -581,6 +619,10 @@ impl Runtime {
             return Err(error);
         }
         self.shared.flush_metadata()?;
+        if self.shared.polling.flush().is_err() {
+            self.shared
+                .log("", "开播偏好缓存保存失败，消息归档不受影响");
+        }
         Ok(json!({"ready":true,"reason":"ready","resume_count":rids.len()}))
     }
     pub(crate) fn resume_update(&self) -> Result<Value> {
@@ -648,6 +690,10 @@ impl Runtime {
             Ok::<_, String>(())
         })?;
         self.shared.flush_metadata()?;
+        if self.shared.polling.flush().is_err() {
+            self.shared
+                .log("", "开播偏好缓存保存失败，消息归档不受影响");
+        }
         if !self.shared.archive.close(Duration::from_secs(15)) {
             return Err("归档尚未完成，未确认退出".into());
         }
