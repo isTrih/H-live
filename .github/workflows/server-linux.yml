@@ -55,6 +55,10 @@ jobs:
           docker compose build server
           bash packaging/server/smoke.sh
           docker image inspect h-live-server:0.1.0 --format '{{json .RepoDigests}}' > image-digests.json
+      - name: Exercise current image as a single application container
+        env:
+          H_LIVE_EPHEMERAL_CI: '1'
+        run: bash packaging/server/docker-single/smoke.sh
       - name: Offline backend capacity and reconnect wave
         run: |
           mkdir -p server-release
