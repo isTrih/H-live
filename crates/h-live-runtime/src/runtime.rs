@@ -64,6 +64,34 @@ pub(crate) struct Shared {
     pub logs: Mutex<Option<std::sync::mpsc::SyncSender<String>>>,
 }
 impl Shared {
+    pub(crate) async fn visitor(
+        &self,
+        route: &crate::proxy::Route,
+        cancel: &CancellationToken,
+    ) -> std::result::Result<crate::net::Visitor, crate::net::Error> {
+        let mut cache = tokio::select! {biased; _=cancel.cancelled()=>return Err(crate::net::Error::Cancelled), cache=route.visitor.lock()=>cache};
+        if let Some((_, visitor)) = cache
+            .as_ref()
+            .filter(|(created, _)| created.elapsed() < Duration::from_secs(600))
+        {
+            return Ok(visitor.clone());
+        }
+        let visitor = self.network.visitor(route, cancel).await?;
+        *cache = Some((tokio::time::Instant::now(), visitor.clone()));
+        Ok(visitor)
+    }
+    pub(crate) async fn invalidate_visitor(
+        &self,
+        route: &crate::proxy::Route,
+        expected: Option<&crate::net::Visitor>,
+    ) {
+        let mut cache = route.visitor.lock().await;
+        if cache.as_ref().is_some_and(|(_, cached)| {
+            expected.is_some_and(|old| old.cookie == cached.cookie && old.did == cached.did)
+        }) {
+            cache.take();
+        }
+    }
     pub fn bind_route(&self, rid: &str, generation: u64, route: Arc<crate::proxy::Route>) {
         if let Some(row) = self
             .state
@@ -113,6 +141,9 @@ impl Shared {
         row.value["broadcast_started_at"] = json!(info.started_at);
         row.value["viewer_count"] = json!(info.viewer_count);
         if info.is_live {
+            if row.value["session_id"] != info.room_id || row.value["anchor_id"] != info.anchor_id {
+                row.value["activities"] = Value::Null;
+            }
             row.value["anchor_id"] = json!(info.anchor_id);
             row.value["session_id"] = json!(info.room_id);
             row.value["title"] = json!(info.title);

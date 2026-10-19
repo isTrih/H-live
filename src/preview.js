@@ -59,6 +59,10 @@ const anchors = Array.from({ length: 300 }, (_, i) => ({
   last_message_at: i < 148 ? "2026-10-14T16:42:08+08:00" : "",
   live_checked_at: "2026-10-14T16:42:00+08:00",
   viewer_count: i < 148 ? 673 + i * 371 : null,
+  activities: i < 148 ? {
+    red_packet:{total:Math.max(i % 4, i % 3 === 0 ? 1 : 0),active_until:i % 3 === 0 ? Math.floor(Date.now()/1000)+300 : null,uncertain:i % 5 === 0},
+    lottery:{total:Math.max(i % 5, i % 3 === 1 ? 1 : 0),active_until:i % 3 === 1 ? Math.floor(Date.now()/1000)+180 : null,uncertain:false},
+  } : null,
   cookie_configured: false,
 }));
 Object.assign(anchors[0], { pc_unsupported: true, pc_support_source: "manual", is_live: null, state: "retrying", detail: "直播状态待确认；浏览器已手动标记非 PC 支持" });

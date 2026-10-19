@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { live, offline, status, selectAnchors, duration, viewerCount, pcUnsupported, messageConnection } from "./model.js";
+import { live, offline, status, selectAnchors, duration, viewerCount, compactViewerCount, pcUnsupported, messageConnection } from "./model.js";
+
+test('compact card audience keeps large readings inside their metric column',()=>{
+  const a={active:true,is_live:true,state:'connected',viewer_count:123456};
+  assert.equal(compactViewerCount(a),'12.3万');
+  assert.equal(viewerCount(a),'123,456');
+  assert.equal(compactViewerCount({...a,viewer_count:0}),'0');
+  assert.equal(compactViewerCount({...a,viewer_count:null}),'—');
+});
 
 test("PC compatibility is explicit and independent from message connectivity", () => {
   const room = { active: true, is_live: null, state: "retrying", pc_unsupported: true };

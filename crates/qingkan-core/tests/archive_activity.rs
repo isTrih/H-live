@@ -52,10 +52,22 @@ fn lottery_draw_dedupe_is_scoped_persistent_and_does_not_guess_unknown_times() {
         match i {
             0 => separate.anchor_id = "12".into(),
             1 => separate.session_id = "102".into(),
-            2 => separate.payload["activity_details"]["draw_at"] = json!(1790784301),
-            3 | 4 => separate.payload["activity_kind"] = json!("red_packet"),
-            5 => separate.payload["activity_details"]["draw_at"] = Value::Null,
-            6 => separate.payload["activity_details"]["draw_at"] = json!(0),
+            2 => {
+                separate.payload["activity_details"]["draw_at"] = json!(1790784301);
+                separate.payload["activity_id"] = json!("another-round");
+            }
+            3 | 4 => {
+                separate.payload["activity_kind"] = json!("red_packet");
+                separate.payload["activity_id"] = json!(format!("packet-{i}"));
+            }
+            5 => {
+                separate.payload["activity_details"]["draw_at"] = Value::Null;
+                separate.payload["activity_id"] = json!("");
+            }
+            6 => {
+                separate.payload["activity_details"]["draw_at"] = json!(0);
+                separate.payload["activity_id"] = json!("");
+            }
             _ => separate.message_type = "chat".into(),
         }
         assert!(store.record_message(separate, String::new(), None).unwrap());

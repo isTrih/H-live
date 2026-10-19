@@ -18,10 +18,10 @@ pub const CONTENT_TYPES: [&str; 8] = [
     "chat", "gift", "like", "member", "social", "fansclub", "emoji", "activity",
 ];
 pub const SCHEMA_VERSION: i64 = 3;
+#[path = "activity_archive.rs"]
+mod activity_archive;
 #[path = "audience.rs"]
 mod audience;
-#[path = "lottery_archive.rs"]
-mod lottery_archive;
 #[path = "quality.rs"]
 pub mod quality;
 #[path = "recent.rs"]
@@ -240,6 +240,8 @@ fn initialize_schema(
             .exists([])?
         && conn.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='audience_minutes'")?.exists([])?
         && conn.prepare("SELECT 1 FROM sqlite_schema WHERE type='index' AND name='messages_lottery_draw'")?.exists([])?
+        && conn.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='activity_rounds'")?.exists([])?
+        && conn.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='activity_aliases'")?.exists([])?
         && conn.query_row("SELECT COUNT(*) FROM sqlite_schema WHERE type='index' AND name IN ('messages_type_recent','messages_room_recent','messages_room_type_recent')",[],|r|r.get::<_,i64>(0))?==3
     {
         return Ok(());
@@ -281,7 +283,7 @@ fn initialize_schema(
         quality::initialize(&tx)?;
         tx.execute_batch(audience::SCHEMA)?;
         tx.execute_batch(recent::INDEXES)?;
-        lottery_archive::initialize(&tx)?;
+        activity_archive::initialize(&tx)?;
         if tx.prepare("PRAGMA foreign_key_check")?.exists([])? {
             return Err(ArchiveError::Invalid(
                 "消息库关系校验失败，升级未提交".into(),
@@ -775,11 +777,14 @@ fn save_batch(connection: &mut Connection, batch: &[Prepared]) -> Result<Vec<boo
         let r = &request.record;
         tx.prepare_cached("INSERT INTO anchors VALUES(?1,?2,?3,?4,?4) ON CONFLICT(anchor_id) DO UPDATE SET anchor_name=excluded.anchor_name,web_rid=excluded.web_rid,first_seen=MIN(anchors.first_seen,excluded.first_seen),last_seen=MAX(anchors.last_seen,excluded.last_seen)")?.execute(params![r.anchor_id,r.anchor_name,r.web_rid,r.received_at])?;
         tx.prepare_cached("INSERT INTO sessions VALUES(?1,?2,?3,?4,?5,?6,?6,?7) ON CONFLICT(anchor_id,session_id) DO UPDATE SET anchor_name=excluded.anchor_name,web_rid=excluded.web_rid,title=excluded.title,first_seen=MIN(sessions.first_seen,excluded.first_seen),last_seen=MAX(sessions.last_seen,excluded.last_seen),started_at=COALESCE(sessions.started_at,excluded.started_at)")?.execute(params![r.anchor_id,r.session_id,r.anchor_name,r.web_rid,request.title,r.received_at,request.started_at])?;
-        if lottery_archive::merge_existing(&tx, r, &request.payload)? {
+        if activity_archive::merge_existing(&tx, r, &request.payload)? {
             results.push(false);
             continue;
         }
         let inserted=tx.prepare_cached("INSERT INTO messages(anchor_id,anchor_name,web_rid,session_id,sender_id,sender_name,message_type,content,message_time,received_at,time_source,message_id,message_time_epoch,received_at_epoch,payload_json) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15) ON CONFLICT(anchor_id,session_id,message_id) WHERE message_id<>'' DO NOTHING")?.execute(params![r.anchor_id,r.anchor_name,r.web_rid,r.session_id,r.sender_id,r.sender_name,r.message_type,r.content,r.message_time,r.received_at,r.time_source,r.message_id,request.sent,request.received,request.payload])?==1;
+        if inserted {
+            activity_archive::register(&tx, r, &request.payload, tx.last_insert_rowid())?;
+        }
         results.push(inserted);
     }
     tx.commit()?;

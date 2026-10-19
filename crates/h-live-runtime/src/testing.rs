@@ -17,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Default)]
 pub struct Counters {
+    pub visitors: AtomicUsize,
     pub active: AtomicUsize,
     pub peak: AtomicUsize,
     pub connections: AtomicUsize,
@@ -24,6 +25,7 @@ pub struct Counters {
     pub force_disconnect_through: AtomicUsize,
 }
 pub struct Simulation {
+    pub activity_lifecycle: bool,
     pub live_rooms: u64,
     pub interval_ms: u64,
     pub reconnect_after: u64,
@@ -32,6 +34,7 @@ pub struct Simulation {
 impl Default for Simulation {
     fn default() -> Self {
         Self {
+            activity_lifecycle: false,
             live_rooms: 50,
             interval_ms: 200,
             reconnect_after: 0,
@@ -46,6 +49,7 @@ impl Transport for Simulation {
         c: &'a CancellationToken,
     ) -> BoxFuture<'a, Result<Visitor, Error>> {
         async move {
+            self.counters.visitors.fetch_add(1, Ordering::AcqRel);
             let _p = r.admit(false, c).await.map_err(|_| Error::Cancelled)?;
             Ok(Visitor {
                 cookie: "synthetic-visitor".into(),
@@ -96,6 +100,7 @@ impl Transport for Simulation {
                 connection: number as u64,
                 reconnect: self.reconnect_after,
                 interval: tokio::time::interval(Duration::from_millis(self.interval_ms)),
+                activity_lifecycle: self.activity_lifecycle,
                 counters: self.counters.clone(),
             }) as Box<dyn MessageSocket>)
         }
@@ -103,6 +108,7 @@ impl Transport for Simulation {
     }
 }
 struct SyntheticSocket {
+    activity_lifecycle: bool,
     room: u64,
     count: u64,
     connection: u64,
@@ -123,7 +129,14 @@ impl MessageSocket for SyntheticSocket {
         async move{tokio::select!{biased;_=c.cancelled()=>return Err(Error::Cancelled),_=self.interval.tick()=>{}}if self.counters.force_disconnect_through.load(Ordering::Acquire)>=self.connection as usize{return Err(Error::Closed)}self.count+=1;if self.reconnect>0&&self.count>self.reconnect{return Err(Error::Closed)}self.counters.frames.fetch_add(1,Ordering::AcqRel);let id=self.connection*1_000_000+self.count;let common=[number(2,id),number(3,self.room),number(4,1800000000+self.count)].concat();let user=[number(1,9000+self.count%20),text(3,"合成观众")].concat();
         let chat=[blob(1,&common),blob(2,&user),text(3,&format!("正常互动问题 {}",self.count))].concat();
         let gift=[blob(1,&[number(2,id+500_000),number(3,self.room)].concat()),number(6,1),blob(7,&user),blob(15,&text(16,"合成礼物"))].concat();
-        Ok(Some(frame(&[("WebcastChatMessage",chat),("WebcastGiftMessage",gift)])))
+        let mut messages=vec![("WebcastChatMessage",chat),("WebcastGiftMessage",gift)];
+        if self.activity_lifecycle {
+            let now=chrono::Utc::now().timestamp() as u64;
+            let packet=[text(1,"998877665544332211"),number(2,now),number(3,now+60),number(11,10),number(12,if self.count<4{10}else{0})].concat();
+            messages.push(("WebcastPreviewCjRpMessage",[blob(1,&packet),blob(2,&[number(2,id+700_000),number(3,self.room),number(4,1800000000+self.count)].concat())].concat()));
+            messages.push(("WebcastLuckyBoxTempStatusMessage",blob(1,&[number(2,id+800_000),number(3,self.room)].concat())));
+        }
+        Ok(Some(frame(&messages)))
     }.boxed()
     }
     fn send_frame<'a>(

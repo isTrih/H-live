@@ -76,3 +76,9 @@ export function duration(a, now = Date.now() / 1000) {
 export function viewerCount(a) {
   return live(a) && a.viewer_count != null && Number.isFinite(Number(a.viewer_count)) ? num(a.viewer_count) : "—";
 }
+export function compactViewerCount(a) {
+  const count = viewerCount(a);
+  return count !== '—' && Number(a.viewer_count) >= 10000
+    ? new Intl.NumberFormat('zh-CN', {notation:'compact', maximumFractionDigits:1}).format(a.viewer_count)
+    : count;
+}

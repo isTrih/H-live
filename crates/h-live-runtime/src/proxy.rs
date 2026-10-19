@@ -416,6 +416,7 @@ pub fn parse(
     Ok((records, preview))
 }
 pub struct Route {
+    pub(crate) visitor: tokio::sync::Mutex<Option<(Instant, crate::net::Visitor)>>,
     pub id: String,
     pub proxy: Option<ProxyRecord>,
     pub client: reqwest::Client,
@@ -445,6 +446,7 @@ impl Route {
     pub fn new(proxy: Option<ProxyRecord>) -> Result<Arc<Self>> {
         let http = client(proxy.as_ref())?;
         Ok(Arc::new(Self {
+            visitor: tokio::sync::Mutex::new(None),
             id: proxy
                 .as_ref()
                 .map(|p| p.id.clone())

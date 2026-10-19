@@ -88,13 +88,13 @@ fn populated_v1_preserves_values_ids_indexes_fks_and_autoincrement() {
         CREATE VIEW visible_messages AS SELECT id,content FROM messages;
         CREATE TRIGGER view_delete INSTEAD OF DELETE ON visible_messages BEGIN DELETE FROM messages WHERE id=OLD.id; END;").unwrap();
     let before = state(&c);
-    let objects = rows(&c,"SELECT type,name,sql FROM sqlite_schema WHERE type IN ('index','trigger','view') AND tbl_name NOT LIKE 'quality_%' AND tbl_name<>'session_monitor_durations' AND name<>'messages_quality_session' AND name NOT IN ('messages_type_recent','messages_room_recent','messages_room_type_recent','messages_lottery_draw') ORDER BY type,name");
+    let objects = rows(&c,"SELECT type,name,sql FROM sqlite_schema WHERE type IN ('index','trigger','view') AND tbl_name NOT LIKE 'quality_%' AND tbl_name<>'session_monitor_durations' AND name<>'messages_quality_session' AND name NOT IN ('messages_type_recent','messages_room_recent','messages_room_type_recent','messages_lottery_draw','activity_alias_row','activity_round_scope','messages_activity_scope') ORDER BY type,name");
     let fk = rows(&c, "PRAGMA foreign_key_list(messages)");
     let store = ArchiveStore::open(dir.path(), ArchiveOptions::default()).unwrap();
     assert_eq!(version(&c), 3);
     assert_eq!(state(&c), before);
     assert_eq!(rows(&c, "PRAGMA foreign_key_list(messages)"), fk);
-    assert_eq!(rows(&c,"SELECT type,name,sql FROM sqlite_schema WHERE type IN ('index','trigger','view') AND tbl_name NOT LIKE 'quality_%' AND tbl_name<>'session_monitor_durations' AND name<>'messages_quality_session' AND name NOT IN ('messages_type_recent','messages_room_recent','messages_room_type_recent','messages_lottery_draw') ORDER BY type,name"),objects);
+    assert_eq!(rows(&c,"SELECT type,name,sql FROM sqlite_schema WHERE type IN ('index','trigger','view') AND tbl_name NOT LIKE 'quality_%' AND tbl_name<>'session_monitor_durations' AND name<>'messages_quality_session' AND name NOT IN ('messages_type_recent','messages_room_recent','messages_room_type_recent','messages_lottery_draw','activity_alias_row','activity_round_scope','messages_activity_scope') ORDER BY type,name"),objects);
     assert_eq!(
         rows(&c, "SELECT * FROM external_ref"),
         vec![vec![Value::Integer(42)]]

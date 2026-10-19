@@ -79,6 +79,22 @@ async fn viewers(
     })
     .await
 }
+async fn activities(
+    shared: &Shared,
+    rid: &str,
+    generation: u64,
+    info: &RoomInfo,
+) -> storage::Result<()> {
+    let (anchor, session) = (info.anchor_id.clone(), info.room_id.clone());
+    let summary = database(shared, move |archive| {
+        archive
+            .activity_summary(&anchor, &session, chrono::Utc::now().timestamp())
+            .map_err(|_| "活动统计读取失败".into())
+    })
+    .await?;
+    shared.patch(rid, generation, json!({"activities":summary}));
+    Ok(())
+}
 pub(crate) async fn refresh_one(
     shared: Arc<Shared>,
     rid: String,
@@ -88,7 +104,6 @@ pub(crate) async fn refresh_one(
     cancel: CancellationToken,
 ) -> storage::Result<()> {
     let visitor = shared
-        .network
         .visitor(&route, &cancel)
         .await
         .map_err(|e| e.to_string())?;
@@ -153,7 +168,7 @@ pub(crate) async fn run(
         );
         let result:std::result::Result<(),net::Error>=async{
             let query = shared.polling.acquire(&rid,known_live,offline_checks,&cancel).await.ok_or(net::Error::Cancelled)?;
-            if visitor.is_none(){visitor=Some(shared.network.visitor(&route,&cancel).await?)}
+            if visitor.is_none(){visitor=Some(shared.visitor(&route,&cancel).await?)}
             let guest=visitor.as_ref().unwrap();
             let info=shared.network.room(&route,guest,&rid,&cancel).await?;
             drop(query); // The permit bounds status queries, never the long-lived WSS stream.
@@ -181,6 +196,7 @@ pub(crate) async fn run(
                 bound_session=info.room_id.clone();
             }
             viewers(&shared,&rid,generation,&info).await.map_err(|_|net::Error::Invalid("在线统计归档失败"))?;
+            activities(&shared,&rid,generation,&info).await.map_err(|_|net::Error::Invalid("活动统计读取失败"))?;
             shared.status(&rid,generation,"connecting","正在建立消息连接");
             let mut socket=shared.network.connect(route.clone(),guest,&info.room_id,&cancel).await?;
             let began=Instant::now();shared.patch(&rid,generation,json!({"duration_seconds":accumulated,"duration_running":true,"duration_updated_at":crate::proxy::epoch_ms() as f64/1000.,"duration_source":"monitored"}));
@@ -188,6 +204,8 @@ pub(crate) async fn run(
             let mut heartbeat=tokio::time::interval(Duration::from_secs(20));heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             let mut checkpoints=tokio::time::interval(Duration::from_secs(5));checkpoints.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             let mut last_read=Instant::now();
+            let mut activity_dirty=false;
+            let mut activity_refreshed=Instant::now();
             let connection='connection:loop{
                 tokio::select!{biased;
                     _=cancel.cancelled()=>break Err(net::Error::Cancelled),
@@ -196,6 +214,10 @@ pub(crate) async fn run(
                         match tokio::time::timeout(Duration::from_secs(5),socket.send_frame(hb_frame(),&cancel)).await{Ok(Ok(()))=>{},_=>break Err(net::Error::Network)}
                     },
                     _=checkpoints.tick()=>{
+                        if activity_dirty {
+                            if activities(&shared,&rid,generation,&info).await.is_err(){break Err(net::Error::Invalid("活动统计读取失败"))}
+                            activity_dirty=false;activity_refreshed=Instant::now();
+                        }
                         shared.polling.observe_live(&rid,&info.anchor_id,chrono::Utc::now().timestamp());
                         let seconds=accumulated+began.elapsed().as_secs_f64();
                         if checkpoint(&shared,&rid,generation,seconds).await.is_err(){break Err(net::Error::Invalid("监控时长写入失败，已停止任务"))}
@@ -213,17 +235,23 @@ pub(crate) async fn run(
                             if event.kind=="stats" {if let Some(n)=payload["viewer_count"].as_u64().filter(|n|*n<=9_007_199_254_740_991){let mut i=info.clone();i.viewer_count=Some(n);if viewers(&shared,&rid,generation,&i).await.is_err(){cancel.cancel();break}}continue}
                             if event.kind=="control"{shared.log(&rid,"平台确认本场直播结束");shared.patch(&rid,generation,json!({"is_live":false,"live_checked_at":storage::now()}));observed_offline=true;break 'connection Ok(())}
                             if !["chat","like","member","social","fansclub","emoji","activity"].contains(&event.kind){continue}
+                            if event.kind=="activity" && payload["activity_stage"]=="status" && payload["activity_id"].as_str().unwrap_or("").is_empty(){continue}
                             let Some(row)=shared.row(&rid,generation)else{break};let received=storage::now();
                             let time=payload["event_time"].as_u64().filter(|t|*t>0).and_then(|t|chrono::DateTime::from_timestamp(if t>10_000_000_000{(t/1000) as i64}else{t as i64},0)).map(|t|t.with_timezone(&qingkan_core::archive::shanghai()).to_rfc3339_opts(chrono::SecondsFormat::Millis,false)).unwrap_or_default();
                             let text=|k:&str|payload[k].as_str().unwrap_or("").to_owned();
                             let record=MessageRecord{anchor_id:info.anchor_id.clone(),anchor_name:row["name"].as_str().unwrap_or("").into(),web_rid:rid.clone(),session_id:info.room_id.clone(),sender_id:text("sender_id"),sender_name:text("sender_name"),message_type:event.kind.into(),content:text("content"),message_time:time.clone(),received_at:received.clone(),time_source:if time.is_empty(){"missing"}else{"server"}.into(),message_id:text("message_id"),payload:payload.clone()};
                             let title=info.title.clone();let inserted=database(&shared,move|a|a.record_message(record,title,None).map_err(|_|"消息写入失败".into())).await;
-                            match inserted{Ok(true)=>shared.message(&rid,generation,event.kind,&payload,&time,&received),Ok(false)=>{},Err(_)=>{shared.status(&rid,generation,"error","消息写入失败，已暂停此任务");cancel.cancel();break}}
+                            match inserted{Ok(true)=>{shared.message(&rid,generation,event.kind,&payload,&time,&received);activity_dirty|=event.kind=="activity"},Ok(false)=>activity_dirty|=event.kind=="activity",Err(_)=>{shared.status(&rid,generation,"error","消息写入失败，已暂停此任务");cancel.cancel();break}}
+                        }
+                        if activity_dirty && activity_refreshed.elapsed()>=Duration::from_secs(1){
+                            if activities(&shared,&rid,generation,&info).await.is_err(){break Err(net::Error::Invalid("活动统计读取失败"))}
+                            activity_dirty=false;activity_refreshed=Instant::now();
                         }
                     }
                 }
             };
             accumulated+=began.elapsed().as_secs_f64();
+            if activity_dirty { let _=activities(&shared,&rid,generation,&info).await; }
             let saved=checkpoint(&shared,&rid,generation,accumulated).await;
             shared.patch(&rid,generation,json!({"duration_seconds":accumulated,"duration_running":false,"duration_updated_at":crate::proxy::epoch_ms() as f64/1000.}));
             drop(socket);if saved.is_err(){shared.status(&rid,generation,"error","累计时长保存失败，请检查磁盘");cancel.cancel();}connection
@@ -240,6 +268,7 @@ pub(crate) async fn run(
                 match error {
                     net::Error::Status(429 | 444) => {
                         route.cooldown(30u64.saturating_mul(failures as u64).min(300));
+                        shared.invalidate_visitor(&route, visitor.as_ref()).await;
                         visitor = None
                     }
                     net::Error::Network => {
@@ -249,7 +278,10 @@ pub(crate) async fn run(
                             visitor = None
                         }
                     }
-                    net::Error::Unavailable => visitor = None,
+                    net::Error::Unavailable => {
+                        shared.invalidate_visitor(&route, visitor.as_ref()).await;
+                        visitor = None;
+                    }
                     _ => {}
                 }
                 let live = shared

@@ -43,6 +43,136 @@ fn until(r: &Runtime, check: impl Fn(&Value) -> bool) -> Value {
     }
 }
 #[test]
+fn concurrent_rooms_share_one_anonymous_visitor_per_exit() {
+    let d = tempfile::tempdir().unwrap();
+    let simulation = Arc::new(Simulation {
+        live_rooms: 3,
+        ..Default::default()
+    });
+    let counters = simulation.counters.clone();
+    let r = Runtime::open_with_transport(d.path().into(), simulation).unwrap();
+    r.request("add_anchors", json!({"values":"1\n2\n3"}))
+        .unwrap();
+    r.request("start", json!({"rids":["1","2","3"]})).unwrap();
+    until(&r, |p| p["metrics"]["connected"] == 3);
+    assert_eq!(
+        counters.visitors.load(std::sync::atomic::Ordering::Acquire),
+        1,
+        "same exit must not fetch the anonymous homepage once per room"
+    );
+    r.shutdown().unwrap();
+}
+
+#[test]
+fn anonymous_cache_is_exit_scoped_expiring_invalidatable_and_cancelable() {
+    let dir = tempfile::tempdir().unwrap();
+    let simulation = Arc::new(Simulation::default());
+    let counters = simulation.counters.clone();
+    let r = Runtime::open_with_transport(dir.path().into(), simulation).unwrap();
+    r.rt.block_on(async {
+        use crate::proxy::{ProxyRecord, Route};
+        use tokio_util::sync::CancellationToken;
+        let direct = Route::new(None).unwrap();
+        let proxy = Route::new(Some(
+            ProxyRecord::from_line("8.8.8.8:8080", "http").unwrap(),
+        ))
+        .unwrap();
+        let cancel = CancellationToken::new();
+        let first = r.shared.visitor(&direct, &cancel).await.unwrap();
+        r.shared.visitor(&proxy, &cancel).await.unwrap();
+        assert_eq!(
+            counters.visitors.load(std::sync::atomic::Ordering::Acquire),
+            2
+        );
+        let wrong = crate::net::Visitor {
+            cookie: "old".into(),
+            did: "old".into(),
+        };
+        r.shared.invalidate_visitor(&direct, Some(&wrong)).await;
+        r.shared.visitor(&direct, &cancel).await.unwrap();
+        assert_eq!(
+            counters.visitors.load(std::sync::atomic::Ordering::Acquire),
+            2
+        );
+        r.shared.invalidate_visitor(&direct, Some(&first)).await;
+        r.shared.visitor(&direct, &cancel).await.unwrap();
+        assert_eq!(
+            counters.visitors.load(std::sync::atomic::Ordering::Acquire),
+            3
+        );
+        direct.visitor.lock().await.as_mut().unwrap().0 =
+            tokio::time::Instant::now() - Duration::from_secs(601);
+        r.shared.visitor(&direct, &cancel).await.unwrap();
+        assert_eq!(
+            counters.visitors.load(std::sync::atomic::Ordering::Acquire),
+            4
+        );
+        let lock = direct.visitor.lock().await;
+        cancel.cancel();
+        assert!(matches!(
+            tokio::time::timeout(
+                Duration::from_millis(100),
+                r.shared.visitor(&direct, &cancel)
+            )
+            .await
+            .unwrap(),
+            Err(crate::net::Error::Cancelled)
+        ));
+        drop(lock);
+        r.shared
+            .visitor(&direct, &CancellationToken::new())
+            .await
+            .unwrap();
+        assert_eq!(
+            counters.visitors.load(std::sync::atomic::Ordering::Acquire),
+            4
+        );
+    });
+    r.shutdown().unwrap();
+}
+
+#[test]
+fn activity_lifecycle_updates_dashboard_without_counting_notifications_as_rounds() {
+    let dir = tempfile::tempdir().unwrap();
+    let r = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 1,
+            interval_ms: 600,
+            activity_lifecycle: true,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    r.request("add_anchors", json!({"values":"1"})).unwrap();
+    r.request("start", json!({"rids":["1"]})).unwrap();
+    let first = until(&r, |p| {
+        p["anchors"][0]["activities"]["red_packet"]["active_until"].is_number()
+    });
+    assert_eq!(first["anchors"][0]["activities"]["red_packet"]["total"], 1);
+    let ended = until(&r, |p| {
+        p["anchors"][0]["activities"]["red_packet"]["total"] == 1
+            && p["anchors"][0]["activities"]["red_packet"]["active_until"].is_null()
+    });
+    assert_eq!(
+        ended["anchors"][0]["activities"]["red_packet"]["uncertain"],
+        false
+    );
+    r.request("stop", json!({"rids":["1"]})).unwrap();
+    let messages = r
+        .request("recent_messages", json!({"type":"activity"}))
+        .unwrap();
+    assert_eq!(messages["messages"].as_array().unwrap().len(), 1);
+    r.request("start", json!({"rids":["1"]})).unwrap();
+    let resumed = until(&r, |p| p["anchors"][0]["state"] == "connected");
+    assert_eq!(
+        resumed["anchors"][0]["activities"]["red_packet"]["total"],
+        1
+    );
+    assert!(resumed["anchors"][0]["activities"]["red_packet"]["active_until"].is_null());
+    r.shutdown().unwrap();
+}
+#[test]
 fn offline_poll_starts_at_thirty_seconds_restart_resets_and_live_preferences_persist() {
     let (d, r) = setup();
     r.request("add_anchors", json!({"values":"1\n3"})).unwrap();
