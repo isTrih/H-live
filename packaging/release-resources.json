@@ -32,7 +32,9 @@
     "licenses/upstream/DouyinLiveMonitor-MIT.txt",
     "licenses/upstream/DouyinLiveMonitor-Remastered-MIT.txt",
     "docs/engineering/ADAPTIVE_POLLING.md",
-    "docs/engineering/VALIDATION_0.3.1.md"
+    "docs/engineering/VALIDATION_0.3.1.md",
+    "docs/engineering/ACTIVITY_ROUNDS.md",
+    "src/assets/README.md"
   ],
   "directories": [
     "release-notes"

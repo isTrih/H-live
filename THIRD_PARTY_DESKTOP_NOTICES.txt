@@ -1,4 +1,4 @@
-H-live / 氢看直播 0.3.1 - Rust, JavaScript and font dependencies
+H-live / 氢看直播 0.3.2 - Rust, JavaScript and font dependencies
 Upstream notices: LICENSE and licenses/upstream. Dependency texts: licenses/.
 adler2 2.0.1: 0BSD OR MIT OR Apache-2.0
 aho-corasick 1.1.5: Unlicense OR MIT

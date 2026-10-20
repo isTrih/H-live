@@ -1,6 +1,8 @@
-# 氢看直播 0.3.1：纯 Rust 后端构建
+# 氢看直播 0.3.2：纯 Rust 后端构建
 
 目标 Windows 10/11 x64。需要 PowerShell 7、Rust MSVC 工具链、Node.js 24、Visual Studio Build Tools C++ 桌面工具与 Windows SDK。Node 仅构建界面，不进入运行包；不再需要 CPython、PyO3、PyInstaller 或 V8。
+
+桌面版本只在本地构建安装包和 CDN 热更新文件，不创建桌面 GitHub Release。GitHub Releases 保留给独立服务端 `server-v*` 发布线；源码仍可同步仓库。
 
 ```powershell
 npm.cmd ci

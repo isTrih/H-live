@@ -1,6 +1,6 @@
 [package]
 name = "douyin-live-monitor"
-version = "0.3.1"
+version = "0.3.2"
 description = "氢看直播 · 多主播直播间消息监控"
 edition = "2021"
 license = "MIT"

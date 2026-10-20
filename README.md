@@ -1,6 +1,8 @@
 # H-live · 氢看直播
 
-Windows 多主播直播消息监控应用。**0.3.1 使用 Rust 后端 + Tauri 2 界面，不附带 Python、Node、独立 V8 签名引擎或外部签名服务。** 保留原有顶部菜单、监控网格、字体、场次分析和月度导出界面。
+Windows 多主播直播消息监控应用。**0.3.2 使用 Rust 后端 + Tauri 2 界面，不附带 Python、Node、独立 V8 签名引擎或外部签名服务。** 保留原有顶部菜单、监控网格、字体、场次分析和月度导出界面。
+
+桌面安装包和 CDN 热更新文件在本地构建分发；GitHub Releases 用于独立服务端。当前桌面版变化见 [0.3.2 更新日志](release-notes/0.3.2.md)。
 
 Windows 安装器与 CDN 更新文件见 [Releases](https://github.com/isTrih/H-live/releases)。更新清单由维护者手动上传 CDN。
 
@@ -56,7 +58,7 @@ cargo fetch --manifest-path crates/Cargo.toml --locked --target x86_64-pc-window
 
 继续使用 `%LOCALAPPDATA%/DouyinLiveMonitor`，保留应用标识和已有数据库。首次安装列表为空。旧代理配置按原 Windows 用户的 DPAPI 格式读取并保护；旧登录字段不解密、不发送、不对界面暴露。调试请设置独立 `DOUYIN_MONITOR_HOME`。
 
-验证包含核心归档/导出回归、旧版合成数据库与 DPAPI 配置升级、TLS/CONNECT、停止/重启、更新恢复、合成礼物过滤，以及真实游客 WSS 有界观察。性能验证使用 **300 个配置任务、50 个模拟消息连接、51 个出口和一次集中重连**；不等于抖音真实 50 房间并发验收。完整证据范围见 [0.3.1 验证](docs/engineering/VALIDATION_0.3.1.md)。
+验证包含核心归档/导出回归、旧版合成数据库与 DPAPI 配置升级、TLS/CONNECT、停止/重启、更新恢复、合成礼物过滤，以及真实游客 WSS 有界观察。性能验证使用 **300 个配置任务、50 个模拟消息连接、51 个出口和一次集中重连**；不等于抖音真实 50 房间并发验收。活动轮次合并、卡片和启动优化见 [活动统计说明](docs/engineering/ACTIVITY_ROUNDS.md)；此前调度及容器发布验收见 [0.3.1 验证](docs/engineering/VALIDATION_0.3.1.md)。
 
 ## 来源与许可
 
