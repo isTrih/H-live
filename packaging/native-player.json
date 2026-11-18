@@ -1,0 +1,9 @@
+{
+  "platform": "windows-x64",
+  "version": "0.41.0-dev-g0fae46954",
+  "url": "https://github.com/mpv-player/mpv/releases/download/git-release/libmpv-v0.41.0-dev-g0fae46954-39894836680-x86_64-w64-mingw32-lgpl.zip",
+  "sha256": "5e9ce24e62910fc7ad07e7d15c934cfcaf9236ce46cd3c29964e91b00794cd38",
+  "source": "https://github.com/mpv-player/mpv/tree/0fae46954",
+  "build_recipe": "https://github.com/mpv-player/mpv/tree/0fae46954/.github/workflows",
+  "license": "LGPL-3.0-or-later"
+}

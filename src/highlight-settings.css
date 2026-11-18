@@ -1,0 +1,6 @@
+.highlight-settings-heading{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.highlight-settings-heading h3{font-size:16px;margin:0}.highlight-settings-heading>span{font-size:13px;color:var(--muted)}
+.highlight-settings-description{font-size:14px;line-height:1.7;color:var(--muted);margin:10px 0 18px;max-width:66ch}
+.highlight-settings-fields{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}.highlight-settings-fields label{display:grid;gap:8px;font-size:14px;min-width:0}.highlight-settings-fields label:last-child{grid-column:1/-1}.highlight-settings-fields input,.highlight-settings-fields select{min-width:0;width:100%;font-size:14px}
+.highlight-settings-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px}.highlight-settings-actions>span{margin-right:auto;font-size:13px;color:var(--muted);line-height:1.6;min-width:0;overflow-wrap:anywhere}.highlight-settings-error{font-size:14px;color:#a03d34;line-height:1.6;overflow-wrap:anywhere}
+.highlight-settings-panel{padding:22px 24px;container-name:highlight-form;container-type:inline-size}
+@container highlight-form (max-width:440px){.highlight-settings-fields{grid-template-columns:minmax(0,1fr)}.highlight-settings-actions>span{flex-basis:100%}}

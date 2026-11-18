@@ -27,3 +27,9 @@ foreach ($directory in $manifest.directories) {
     Get-ChildItem -LiteralPath $source -File -Filter '*.md' | Copy-Item -Destination $destination -Force
 }
 Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'packaging\licenses') | Copy-Item -Destination $licenseTarget -Recurse -Force
+& (Join-Path $PSScriptRoot 'prepare_media_tools.ps1')
+$mediaTarget = [IO.Path]::GetFullPath((Join-Path $releaseRoot 'src-tauri/bundle-media'))
+if (-not $mediaTarget.StartsWith($releaseRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Media staging escaped workspace.' }
+if (Test-Path -LiteralPath $mediaTarget) { Remove-Item -LiteralPath $mediaTarget -Recurse -Force }
+New-Item -ItemType Directory -Path $mediaTarget -Force | Out-Null
+Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'packaging/tools/media') -File | Copy-Item -Destination $mediaTarget -Force

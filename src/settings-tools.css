@@ -1,0 +1,44 @@
+.settings-disclosure { overflow: hidden; }
+.settings-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; list-style: none; cursor: pointer; padding: 20px 24px; }
+.settings-disclosure > summary::-webkit-details-marker { display: none; }
+.settings-disclosure > summary > span { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+.settings-disclosure > summary strong { font-size: 16px; font-weight: 600; }
+.settings-disclosure > summary small { font-size: 13px; color: var(--muted); }
+.settings-disclosure > summary::after { content: ""; flex: none; width: 7px; height: 7px; border-right: 1.5px solid #798578; border-bottom: 1.5px solid #798578; transform: rotate(45deg); transition: transform 160ms ease; margin-right: 3px; }
+.settings-disclosure[open] > summary::after { transform: rotate(225deg); }
+.settings-disclosure > summary:focus-visible { outline: 2px solid var(--accent, #638167); outline-offset: -3px; }
+.settings-disclosure-body { padding: 0 24px 22px; min-width: 0; overflow-wrap: anywhere; }
+.settings-disclosure .proxy-settings-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 3px; }
+.settings-disclosure .proxy-configuration { gap: 18px; padding-top: 20px; }
+.settings-disclosure .source-control { min-width: 0; flex-wrap: wrap; }
+.settings-disclosure .source-control select { min-width: 0; max-width: 100%; }
+.settings-disclosure .proxy-assignments .toolbar { flex-wrap: wrap; }
+.settings-disclosure .proxy-assignments .search { min-width: 0; max-width: 100%; }
+.settings-disclosure .assignment-pages { flex-wrap: wrap; }
+.settings-disclosure .proxy-summary { flex-wrap: wrap; }
+.settings-disclosure .proxy-section { margin-top: 16px; }
+.diagnostics-option { padding: 2px 0 10px; }
+.diagnostics-option .help { margin: 10px 0 0; }
+#debug-log-panel .panel-header { padding: 16px 0; }
+#debug-log-panel .log-row { grid-template-columns: 76px 100px 50px minmax(0, 1fr); }
+@media (prefers-reduced-motion: reduce) { .settings-disclosure > summary::after { transition: none; } }
+@media (max-width: 640px) { .settings-disclosure > summary { padding: 18px; } .settings-disclosure-body { padding: 0 18px 18px; } #debug-log-panel .log-row { grid-template-columns: 70px 1fr; } }
+
+.community-settings-panel { padding: 22px 24px; }
+.community-settings-heading h3 { margin: 0; font-size: 16px; }
+.community-settings-description { margin: 10px 0 18px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.community-settings-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 14px; cursor: pointer; }
+.community-settings-toggle input[role=switch] { appearance: none; position: relative; flex: none; width: 36px; min-width: 36px; height: 22px; min-height: 22px; padding: 0; margin: 0; border: 0; border-radius: 20px; background: #b6beb8; cursor: pointer; transition: background 150ms; }
+.community-settings-toggle input[role=switch]::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #1a382b26; transition: transform 150ms; }
+.community-settings-toggle input[role=switch]:checked { background: var(--green, #25754b); }
+.community-settings-toggle input[role=switch]:checked::before { transform: translateX(14px); }
+.community-settings-toggle input[role=switch]:disabled { opacity: .5; cursor: default; }
+.community-settings-toggle input[role=switch]:focus-visible { outline: 2px solid var(--green, #25754b); outline-offset: 3px; }
+.community-settings-key { display: grid; gap: 8px; margin-top: 20px; font-size: 14px; min-width: 0; }
+.community-settings-key input { width: 100%; min-width: 0; font-size: 14px; }
+.community-settings-hint { margin: 9px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.community-settings-error { margin: 16px 0 0; color: #a03d34; font-size: 14px; line-height: 1.6; }
+.community-settings-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.community-settings-actions > span { min-width: 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+@container utility-page (max-width: 560px) { .settings-layout > .community-settings-panel { padding: 18px; } }
+@media (prefers-reduced-motion: reduce) { .community-settings-toggle input[role=switch], .community-settings-toggle input[role=switch]::before { transition: none; } }

@@ -1,4 +1,13 @@
 const paths = {
+  bookmark:"M5 3h14v19l-7-4-7 4Z",
+  edit:"m16 3 5 5M4 15 16 3l5 5L9 20l-6 1Z",
+  fullscreen:"M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5",
+  shrink:"M3 8h5V3 M21 8h-5V3 M16 21v-5h5 M3 16h5v5",
+  volume:"m11 4-6 5H2v6h3l6 5Z M15 8a6 6 0 0 1 0 8 M18 5a10 10 0 0 1 0 14",
+  muted:"m11 4-6 5H2v6h3l6 5Z M16 9l6 6 M22 9l-6 6",
+  "chat-off":"M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2V11.5A8.5 8.5 0 0 1 9.5 3h3a8.5 8.5 0 0 1 8.5 8.5Z M4 3l17 18",
+  restart:"M3 10a9 9 0 1 1 2 8 M3 3v7h7 M12 7v5l3 2",
+  latest:"m4 5 9 7-9 7Z M17 5v14",
   grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   chat: "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2V11.5A8.5 8.5 0 0 1 9.5 3h3a8.5 8.5 0 0 1 8.5 8.5Z M6 9h10 M6 13h7",
   archive: "M4 4h16v4H4z M6 8v12h12V8 M10 12h4",

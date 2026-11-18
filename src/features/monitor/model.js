@@ -1,4 +1,5 @@
 import { num } from "../../presentation.js";
+import {anchorTags, tagMatches} from "../../anchor-tags.js";
 
 export const active = (a) =>
   Boolean(
@@ -26,12 +27,13 @@ export const status = (a) =>
             : active(a)
               ? ["waiting", "查询中"]
               : ["idle", "未监控"];
-export function selectAnchors(anchors, search = "", filter = "all") {
+export function selectAnchors(anchors, search = "", filter = "all", tag = "") {
   const q = search.trim().toLowerCase();
   return anchors
     .filter(
       (a) =>
-        (!q || `${a.name} ${a.rid} ${a.anchor_id}`.toLowerCase().includes(q)) &&
+        (!q || `${a.name} ${a.rid} ${a.anchor_id} ${anchorTags(a).join(" ")}`.toLowerCase().includes(q)) &&
+        tagMatches(a, tag) &&
         (filter === "all" ||
           (filter === "unsupported" && pcUnsupported(a)) ||
           (filter === "live" && live(a)) ||

@@ -1,6 +1,6 @@
-//! Atomic legacy-compatible settings. Only proxy secrets are decrypted.
-use base64::{engine::general_purpose::STANDARD, Engine};
-use serde_json::{json, Value};
+//! Atomic legacy-compatible settings. Credentials use host-provided encryption.
+use base64::{Engine, engine::general_purpose::STANDARD};
+use serde_json::{Value, json};
 use std::{
     fs,
     io::Write,
@@ -9,6 +9,7 @@ use std::{
 };
 
 pub type Result<T> = std::result::Result<T, String>;
+const SECRET_FIELDS: [&str; 2] = ["highlight_api_key", "community_api_key"];
 /// Credential protection is supplied by the host; desktop keeps user DPAPI.
 pub trait SecretProtector: Send + Sync {
     fn protect(&self, input: &[u8]) -> Result<Vec<u8>>;
@@ -144,7 +145,7 @@ impl Settings {
             serde_json::from_slice::<Value>(bytes.strip_prefix(&[239, 187, 191]).unwrap_or(&bytes))
                 .map_err(|_| "配置无效；原文件已保留")?
         } else {
-            json!({"anchors":{},"anchor_metadata":{},"proxy_pool":{"enabled":false,"source":"public","include_direct":true},"imported_proxies":[],"proxy_subscriptions":[]})
+            json!({"anchors":{},"anchor_metadata":{},"debug_logging":false,"proxy_pool":{"enabled":false,"source":"public","include_direct":true},"imported_proxies":[],"proxy_subscriptions":[]})
         };
         if !value.is_object()
             || !value["anchors"].is_object()
@@ -152,11 +153,18 @@ impl Settings {
         {
             return Err("主播配置无效；原文件已保留".into());
         }
+        if !value["debug_logging"].is_boolean() {
+            value["debug_logging"] = json!(false);
+        }
+        if !value["community_enabled"].is_boolean() {
+            value["community_enabled"] = json!(false);
+        }
         for (rid, name) in value["anchors"].as_object().unwrap() {
             if !id(rid) || !name.is_string() || name.as_str().unwrap().chars().count() > 200 {
                 return Err("主播配置无效".into());
             }
         }
+        value["anchor_tags"] = crate::anchor_tags::canonical(&value["anchor_tags"])?;
         for key in ["imported_proxies", "proxy_subscriptions"] {
             let encrypted = format!("{key}_encrypted");
             if let Some(s) = value[&encrypted].as_str() {
@@ -165,6 +173,16 @@ impl Settings {
                 value[key] = serde_json::from_slice(&clear).map_err(|_| "代理配置格式无效")?;
             } else if !value[key].is_array() {
                 value[key] = json!([])
+            }
+        }
+        for key in SECRET_FIELDS {
+            if let Some(raw) = value[format!("{key}_encrypted")].as_str() {
+                let raw = STANDARD.decode(raw).map_err(|_| "服务凭据编码无效")?;
+                let clear = protector.unprotect(&raw)?;
+                value[key] = json!(String::from_utf8(clear).map_err(|_| "服务凭据格式无效")?);
+            } else {
+                // Never accept a plaintext key left by an older/manual config.
+                value[key] = json!("");
             }
         }
         // Legacy login fields are opaque: never decrypt, expose or send them.
@@ -183,6 +201,7 @@ impl Settings {
         Ok(())
     }
     fn persist(&self, value: &Value) -> Result<()> {
+        crate::anchor_tags::validate(&value["anchor_tags"])?;
         let mut disk = value.clone();
         disk["schema_version"] = json!(2);
         for key in ["imported_proxies", "proxy_subscriptions"] {
@@ -196,6 +215,18 @@ impl Settings {
             if list.as_array().is_some_and(|v| !v.is_empty()) {
                 let encoded = serde_json::to_vec(&list).map_err(|_| "代理配置无效")?;
                 disk[encrypted] = json!(STANDARD.encode(self.protector.protect(&encoded)?));
+            }
+        }
+        for field in SECRET_FIELDS {
+            let key = disk
+                .as_object_mut()
+                .unwrap()
+                .remove(field)
+                .unwrap_or(Value::Null);
+            let encrypted = format!("{field}_encrypted");
+            disk.as_object_mut().unwrap().remove(&encrypted);
+            if let Some(key) = key.as_str().filter(|s| !s.is_empty()) {
+                disk[encrypted] = json!(STANDARD.encode(self.protector.protect(key.as_bytes())?));
             }
         }
         atomic(
@@ -232,11 +263,31 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let mut s = Settings::load(d.path().into()).unwrap();
         assert_eq!(s.value["anchors"], json!({}));
+        assert_eq!(s.value["debug_logging"], false);
+        assert_eq!(s.value["proxy_pool"]["enabled"], false);
         s.value["opaque_old_field"] = json!("retain");
         s.save().unwrap();
         assert_eq!(
             Settings::load(d.path().into()).unwrap().value["opaque_old_field"],
             "retain"
+        );
+    }
+    #[test]
+    fn older_configs_default_to_quiet_logging_and_keep_explicit_preferences() {
+        let d = tempfile::tempdir().unwrap();
+        fs::write(
+            d.path().join("config.json"),
+            br#"{"anchors":{},"proxy_pool":{"enabled":true}}"#,
+        )
+        .unwrap();
+        let mut s = Settings::load(d.path().into()).unwrap();
+        assert_eq!(s.value["debug_logging"], false);
+        assert_eq!(s.value["proxy_pool"]["enabled"], true);
+        s.value["debug_logging"] = json!(true);
+        s.save().unwrap();
+        assert_eq!(
+            Settings::load(d.path().into()).unwrap().value["debug_logging"],
+            true
         );
     }
     #[cfg(windows)]

@@ -19,6 +19,8 @@ try {
     Get-ChildItem -LiteralPath src-tauri/bundle-docs | Copy-Item -Destination $output -Recurse
     New-Item -ItemType Directory -Path (Join-Path $output 'licenses') -Force | Out-Null
     Get-ChildItem -LiteralPath packaging/licenses | Copy-Item -Destination (Join-Path $output 'licenses') -Recurse -Force
+    New-Item -ItemType Directory -Path (Join-Path $output 'media-tools') -Force | Out-Null
+    Get-ChildItem -LiteralPath src-tauri/bundle-media -File | Copy-Item -Destination (Join-Path $output 'media-tools') -Force
     $version = (Get-Content package.json -Raw -Encoding UTF8 | ConvertFrom-Json).version
     $report = Join-Path $root "build/smoke-report-$version.json"
     $process = Start-Process -FilePath (Join-Path $output 'DouyinLiveMonitor.exe') -ArgumentList @('--self-test', ('"' + $report + '"')) -WindowStyle Hidden -PassThru

@@ -1,0 +1,8 @@
+{
+  "site_id": "site_3a128dba6e2bb19c0bf5c33a",
+  "url": "https://qingkan-live.internal.lilithsites.com",
+  "base_path": "",
+  "gateway_env": "prod",
+  "gateway_service": "c2site",
+  "initial_html_deployment": "dep_b83fda6735ad9f2841ae5c55"
+}

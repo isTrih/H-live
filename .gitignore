@@ -27,6 +27,7 @@ __pycache__/
 /src-tauri/gen/
 /src-tauri/bundle-docs/
 /src-tauri/bundle-licenses/
+/src-tauri/bundle-media/
 /release/
 *.pem
 *.pfx
@@ -38,3 +39,5 @@ __pycache__/
 *.dll
 *.sig
 *.jsonl
+/release-site/.c2site/
+/release-site/latest.json

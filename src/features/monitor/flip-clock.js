@@ -2,7 +2,7 @@
 // through a made-up starting time, and no separate timer runs for each card.
 export function paintClock(element, value) {
   const previous = element.dataset.time;
-  const reduced = element.ownerDocument.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = element.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
   if (reduced) {
     element.querySelectorAll('.is-flipping').forEach(cell => {
       cell.querySelectorAll('.clock-face').forEach(face => face.remove());
@@ -20,6 +20,11 @@ export function paintClock(element, value) {
     node.textContent = text;
     return node;
   };
+  const face = (cls, text) => {
+    const panel = span(`clock-face ${cls}`, '');
+    panel.append(span('clock-glyph', text));
+    return panel;
+  };
   if (!valid.test(value)) {
     element.textContent = value;
     return;
@@ -28,7 +33,8 @@ export function paintClock(element, value) {
     element.replaceChildren(...Array.from(value, char => {
       const cell = span(char === ':' ? 'clock-colon' : 'clock-digit', '');
       cell.setAttribute('aria-hidden', 'true');
-      cell.append(span('clock-value', char));
+      if (char === ':') cell.textContent = char;
+      else cell.append(span('clock-value', char));
       return cell;
     }));
     return;
@@ -39,14 +45,20 @@ export function paintClock(element, value) {
     cell.classList.remove('is-flipping');
     cell.querySelector('.clock-value').textContent = value[i];
     if (reduced) return;
-    const old = span('clock-face clock-out', previous[i]);
-    const next = span('clock-face clock-in', value[i]);
-    cell.append(old, next);
+    // The new top is already underneath. Keep the previous lower half visible
+    // until the new lower half folds down over it from the centre hinge.
+    const oldBottom = face('clock-bottom clock-previous', previous[i]);
+    const oldTop = face('clock-top clock-out', previous[i]);
+    const next = face('clock-bottom clock-in', value[i]);
+    cell.append(oldBottom, oldTop, next);
     cell.classList.add('is-flipping');
-    next.addEventListener('animationend', () => {
-      old.remove();
+    const finish = () => {
+      oldBottom.remove();
+      oldTop.remove();
       next.remove();
       if (!cell.querySelector('.clock-face')) cell.classList.remove('is-flipping');
-    }, {once:true});
+    };
+    next.addEventListener('animationend', finish, {once:true});
+    next.addEventListener('animationcancel', finish, {once:true});
   });
 }

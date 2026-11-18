@@ -37,7 +37,7 @@ foreach ($manifest in @('src-tauri/Cargo.toml','crates/Cargo.toml')) {
         $seen[$key] = $true
     }
 }
-foreach ($name in @('@tauri-apps/api','@tauri-apps/plugin-updater','@tauri-apps/cli','vite')) {
+foreach ($name in @('@tauri-apps/api','@tauri-apps/plugin-updater','@tauri-apps/cli','vite','hls.js')) {
     $source = Join-Path $root "node_modules/$name"
     $package = Get-Content -LiteralPath (Join-Path $source 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $target = Join-Path $destination ('js/' + $name.Replace('/','-').Replace('@',''))
@@ -58,6 +58,14 @@ Copy-Item -LiteralPath (Join-Path $root 'licenses/upstream') -Destination (Join-
 Copy-Item -LiteralPath (Join-Path $root 'docs/research/licenses/douyinlive-proto-MIT.txt') -Destination (Join-Path $destination 'douyinlive-proto-MIT.txt')
 Copy-Item -LiteralPath (Join-Path $root 'packaging/extra-licenses/nsis-3.11') -Destination (Join-Path $destination 'nsis-3.11') -Recurse
 $notices.Add('Unmodified fonts: Douyin Sans Bold and ChillRoundM, SIL OFL 1.1. Font copyrights/licenses are separate from the project license.')
+& (Join-Path $PSScriptRoot 'prepare_media_tools.ps1')
+$mediaLicenses = Join-Path $destination 'media-tools'
+New-Item -ItemType Directory -Path $mediaLicenses -Force | Out-Null
+foreach ($name in @('FFmpeg-LICENSE.txt','libmpv-LICENSE.txt','source.json','native-player-source.json','build-info.txt')) {
+    Copy-Item -LiteralPath (Join-Path $root "packaging/tools/media/$name") -Destination $mediaLicenses -Force
+}
+$notices.Add('FFmpeg 8.1.3-24-g92611900bb: shared LGPL-3.0-or-later build, separate ffmpeg/ffprobe tools. Exact source and build provenance: licenses/media-tools/source.json and build-info.txt.')
+$notices.Add('libmpv 0.41.0-dev-g0fae46954: official LGPL build, dynamically loaded. Exact source and build provenance: licenses/media-tools/native-player-source.json. Unmodified libraries may be replaced with compatible builds.')
 $notices.Add('NSIS and WebView2 retain their own notices. This distribution has no Python, PyO3, V8 or Node runtime.')
 [IO.File]::WriteAllText((Join-Path $root 'THIRD_PARTY_DESKTOP_NOTICES.txt'), (($notices -join "`n") + "`n"), [Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText((Join-Path $root 'THIRD_PARTY_NOTICES.txt'), "H-live $version uses a Rust collector and Tauri WebView. See THIRD_PARTY_DESKTOP_NOTICES.txt, LICENSE, DISCLAIMER.md and licenses/.`n", [Text.UTF8Encoding]::new($false))

@@ -1,4 +1,10 @@
 // Development-only fixtures. Never selected in a packaged build.
+import {DEFAULT_AI_BASE_URL} from "./ai-defaults.js";
+import {version as appVersion} from "../package.json";
+import {createPreviewMarks} from './preview-marks.js';
+import {createPreviewDownloads} from './preview-downloads.js';
+import {normalizeDisplayTimezone,DEFAULT_DISPLAY_TIMEZONE} from './time-display.js';
+import {normalizeTags} from './anchor-tags.js';
 const names = [
   "测试主播甲",
   "测试主播乙",
@@ -66,6 +72,9 @@ const anchors = Array.from({ length: 300 }, (_, i) => ({
   cookie_configured: false,
 }));
 Object.assign(anchors[0], { pc_unsupported: true, pc_support_source: "manual", is_live: null, state: "retrying", detail: "直播状态待确认；浏览器已手动标记非 PC 支持" });
+const tagsByAnchor = new Map([[anchors[0].anchor_id, ["重点关注", "游戏"]], [anchors[1].anchor_id, ["娱乐"]]]);
+const tagsByRoom = new Map();
+const previewTags = anchor => [...(anchor?.anchor_id ? tagsByAnchor.get(anchor.anchor_id) || [] : tagsByRoom.get(anchor?.rid) || [])];
 let archiveSessions = anchors.slice(0, 148).flatMap(a => [0, 1, 2].map(i => ({
   anchor_id: a.anchor_id, anchor_name: a.name, web_rid: a.rid, session_id: String(BigInt(a.session_id) + BigInt(i) * 1000n),
   started_at: `2026-10-${String(i + 10).padStart(2, "0")}T12:00:00+08:00`, records_count: 100 + i * 10,
@@ -73,7 +82,8 @@ let archiveSessions = anchors.slice(0, 148).flatMap(a => [0, 1, 2].map(i => ({
 const deleteJobs = new Map();
 const matchingSessions = p => archiveSessions.filter(s => p.anchor_ids.includes(s.anchor_id)
   && (!p.month || s.started_at.startsWith(p.month)) && (!p.session_ids || p.session_ids.includes(s.session_id)));
-let proxyEnabled = true;
+let proxyEnabled = false;
+let debugLogging = false;
 let proxySource = 'public';
 let proxyIncludeDirect = true;
 let subscriptions = [];
@@ -118,12 +128,19 @@ if (new URLSearchParams(location.search).get('scene') === 'mixed') {
   });
 }
 const demoRoutes = ['direct', '192.0.3.01:8080', '192.0.3.02:8080', '192.0.3.03:8080', '192.0.3.04:8080'];
-anchors.forEach((a, i) => { if (a.active) a.proxy = demoRoutes[i % demoRoutes.length]; });
-const proxySnapshot = () => ({ enabled: proxyEnabled, include_direct: proxyIncludeDirect, refresh: previewBatch(), available: 4, assigned: anchors.filter(a => a.proxy).length, checking: 0, failed: 1, total: 5, last_error: '', subscriptions,
-  routes: demoRoutes.map((endpoint, i) => ({ route_id: endpoint, endpoint, kind: i ? 'proxy' : 'direct', assigned_tasks: anchors.filter(a => a.proxy === endpoint).length, connecting: i === 1 ? 1 : 0, request_inflight: 0, state: i === 4 ? 'cooling' : 'ready', cooldown_seconds: i === 4 ? 42 : 0 })),
-  leases: anchors.filter(a => a.proxy).map(a => ({rid:a.rid, endpoint:a.proxy, kind:a.proxy === 'direct' ? 'direct' : 'proxy', latency_ms:a.proxy === 'direct' ? 0 : 128})) });
+anchors.forEach(a => { if (a.active) a.proxy = 'direct'; });
+const proxySnapshot = () => {
+  const leases=anchors.filter(a=>a.active).map((a,i)=>{
+    const endpoint=proxyEnabled?demoRoutes[(i%(demoRoutes.length-(proxyIncludeDirect?0:1)))+(proxyIncludeDirect?0:1)]:'direct';
+    return {rid:a.rid,endpoint,kind:endpoint==='direct'?'direct':'proxy',latency_ms:endpoint==='direct'?0:128};
+  });
+  const routes=(proxyEnabled?demoRoutes.filter(endpoint=>proxyIncludeDirect||endpoint!=='direct'):['direct']).map(endpoint=>({route_id:endpoint,endpoint,kind:endpoint==='direct'?'direct':'proxy',assigned_tasks:leases.filter(l=>l.endpoint===endpoint).length,connecting:0,request_inflight:0,state:'ready',cooldown_seconds:0}));
+  return {enabled:proxyEnabled,include_direct:proxyIncludeDirect,refresh:previewBatch(),available:proxyEnabled?4:0,assigned:leases.length,checking:0,failed:0,total:routes.length,last_error:'',subscriptions,routes,leases};
+};
 let seq = 0;
 let jobs = [];
+const previewMarks=createPreviewMarks({getAnchor:p=>anchors.find(anchor=>anchor.anchor_id===p.anchor_id)});
+const previewDownloads=createPreviewDownloads({getAnchor:p=>anchors.find(anchor=>(!p.anchor_id||anchor.anchor_id===p.anchor_id)&&anchor.session_id===p.session_id),getMark:id=>previewMarks.get(id)});
 let emitted = false;
 let viewerRefreshStatus={id:"0",active:false,total:0,checked:0,updated:0,failed:0,skipped:0};
 const events = Array.from({ length: 28 }, (_, i) => ({
@@ -152,27 +169,106 @@ for (const [i, activity] of [
     session_id: anchors[1].session_id, msg_type: "activity", sender_id: "", sender_name: "",
     content: activity.content, time_str: `16:43:0${i}`, payload: { ...activity, activity_stage: "notice" } });
 }
-const snapshot = () => ({
-  version: "0.3.0",
-  anchors: [...anchors],
+const snapshot = (includeProxy = true) => ({
+  version: appVersion,
+  anchors: anchors.map(anchor => ({...anchor,tags:previewTags(anchor)})),
   archive_anchors: [...new Map(archiveSessions.map(s => [s.anchor_id, {
-    anchor_id: s.anchor_id, anchor_name: s.anchor_name, web_rid: s.web_rid,
+    anchor_id: s.anchor_id, anchor_name: s.anchor_name, web_rid: s.web_rid, tags: previewTags(s),
   }])).values()],
-  settings: { cookie_configured: false, proxy_enabled: proxyEnabled, proxy_include_direct: proxyIncludeDirect, proxy_source: proxySource, imported_proxy_count: importedProxies.length },
+  settings: { cookie_configured: false, proxy_enabled: proxyEnabled, proxy_include_direct: proxyIncludeDirect, proxy_source: proxySource, imported_proxy_count: importedProxies.length, debug_logging: debugLogging },
   metrics: {
     total_messages: anchors.reduce((n, a) => n + a.message_count, 0),
     process_rss_mb: 55.2,
     thread_count: 305,
     archive_queue: 0,
     viewer_refresh: viewerRefreshStatus,
-    proxy: proxySnapshot(),
+    ...(includeProxy ? {proxy: proxySnapshot()} : {}),
   },
   export_jobs: jobs,
   cursor: seq,
 });
+let startupMonitoring=true;
+let communitySettings={enabled:false,key_configured:false};
+let highlightSettings={base_url:DEFAULT_AI_BASE_URL,model:"",key_configured:false};
+const highlightJobs=new Map();
+function previewTimeline(p){
+  const anchor=anchors.find(a=>a.anchor_id===p.anchor_id)||anchors[1];
+  const current=anchor.session_id===p.session_id;
+  const index=current?0:Math.max(1,Math.min(24,Number(BigInt(p.session_id)-7000000000000000000n)));
+  const start=current?anchor.broadcast_started_at:Date.UTC(2026,9,23-index,4)/1000;
+  const duration=current?Math.floor((anchor.duration_seconds||2675)+Math.max(0,Date.now()/1000-anchor.duration_updated_at)):3600+index*133;
+  const end=start+duration;
+  const lines=["这个新手也能操作吗？","刚才这个走位太漂亮了","谢谢讲解，原来还可以这样","哈哈哈，差一点就成功了","主播能再演示一次吗？","看懂了，这次我也试试","这波配合满分！","原来要先等队友到齐","前面提问的朋友，看这里","这一段真的笑到了"];
+  const messages=[];const buckets=[];
+  for(let minute=0;minute<=Math.floor(duration/60);minute++){
+    const count=Math.round(3+Math.abs(Math.sin(minute*.56))*8+(minute%19===8?24:0)+(minute%23===12?13:0));
+    let actual=0;
+    for(let index=0;index<count;index++){
+      const offset=minute*60+index*60/count;if(offset>duration)break;actual++;
+      messages.push({id:String(messages.length+1),offset_seconds:offset,sender_name:["橘子","小云","晚风","阿圆","夏天"][index%5],content:lines[(minute+index)%lines.length],message_type:"chat",time_source:"server"});
+    }
+    buckets.push({offset_seconds:minute*60,count:actual});
+  }
+  const chatCount=messages.length;
+  const activityEnd=current ? (anchor.duration_seconds || duration) : duration;
+  const activities=[
+    {kind:"lottery",offset_seconds:Math.max(0,activityEnd-26),details:{prize_name:"定制帆布袋",conditions:[{content:"周末快乐"}]},content:"福袋 · 定制帆布袋",time_source:"server"},
+    {kind:"red_packet",offset_seconds:Math.max(0,activityEnd-25),details:{title:"周末小红包",diamond_count:1000},content:"红包 · 周末小红包",time_source:"server"},
+    {kind:"lottery",offset_seconds:Math.floor(activityEnd*.3),details:{prize_name:"游戏周边",conditions:[{content:"一起出发"}]},content:"福袋 · 游戏周边",time_source:"observed"},
+  ].map((item,index)=>({...item,id:String(9000001+index),activity_id:`fixture-${p.session_id}-${index}`,epoch:start+item.offset_seconds,observed_epoch:start+item.offset_seconds,draw_at:item.kind==="lottery"?start+item.offset_seconds+180:null,expires_at:item.kind==="red_packet"?start+item.offset_seconds+180:null,ended:start+item.offset_seconds+180<Date.now()/1000}));
+  for(const item of activities)messages.push({id:item.id,message_type:"activity",content:item.content,sender_name:"直播间活动",time_source:item.time_source==="server"?"server":"missing",offset_seconds:item.time_source==="server"?item.offset_seconds:null,observed_offset_seconds:item.offset_seconds,payload:{activity_kind:item.kind,activity_id:item.activity_id,activity_stage:"notice",activity_details:item.details}});
+  return {anchor_id:p.anchor_id,session_id:p.session_id,start_epoch:start,end_epoch:end,duration_seconds:duration,bucket_seconds:60,buckets,messages,activities,activity_count:activities.length,unpositioned_activity_count:0,unconfirmed_activity_count:0,online:[],summary:{coverage:"partial",anchor_name:anchor.name},total_messages:messages.length,chat_count:chatCount,complete:true};
+}
 export async function previewBridge(method, p = {}) {
+  if(method==='time_display_settings'){let timezone=DEFAULT_DISPLAY_TIMEZONE;try{timezone=normalizeDisplayTimezone(localStorage.getItem('qingkan.preview.timezone.v1')||timezone);}catch{}return {timezone};}
+  if(method==='time_display_save'){const timezone=normalizeDisplayTimezone(p.timezone);localStorage.setItem('qingkan.preview.timezone.v1',timezone);return {timezone};}
+  const markResult=previewMarks.handle(method,p);if(markResult!==undefined)return markResult;
+  const downloadResult=await previewDownloads.handle(method,p);if(downloadResult!==undefined)return downloadResult;
   await new Promise((r) => setTimeout(r, 30));
+  if(method==="startup_settings")return {startup_monitoring:startupMonitoring};
+  if(method==="community_settings")return {...communitySettings};
+  if(method==="community_configure"){
+    if(typeof p.enabled!=="boolean")throw Error("社区生态设置无效");
+    const key=p.clear_key?false:Boolean(p.api_key)||communitySettings.key_configured;
+    if(p.enabled&&!key)throw Error("请输入社区生态 KEY");
+    communitySettings={enabled:p.enabled,key_configured:key};return {...communitySettings};
+  }
+  if(method==="session_replay"){
+    if(import.meta.env.DEV&&new URLSearchParams(location.search).has("media-fixture")){
+      const response=await (await fetch("/build/replay-fixture.json")).json();
+      return response.replay?.media_kind==="hls"?{...response,replay:{...response.replay,time_mapping:[],time_mapping_pending:true}}:response;
+    }
+    return {enabled:communitySettings.enabled,available:false,replay:null};
+  }
+  if(method==="session_replay_timing"){
+    if(import.meta.env.DEV&&new URLSearchParams(location.search).has("media-fixture")){
+      const response=await (await fetch("/build/replay-fixture.json")).json();
+      if(response.replay?.play_url!==p.play_url)throw Error("录播地址已更新，请重试");
+      return {play_url:p.play_url,time_mapping:response.replay.time_mapping||[],playlist_duration_ms:response.replay.playlist_duration_ms??response.replay.duration_ms,time_mapping_pending:false};
+    }
+    throw Error("暂无可对齐的录播时间轴");
+  }
+  if(method==="configure_startup") { if(typeof p.startup_monitoring!=="boolean")throw Error("启动监听设置无效"); startupMonitoring=p.startup_monitoring; return {startup_monitoring:startupMonitoring}; }
+  if(method==="save_settings") {
+    if(typeof p.debug_logging!=="boolean")throw Error("调试日志设置无效");
+    debugLogging=p.debug_logging;
+    return snapshot().settings;
+  }
   if (method === "init") return snapshot();
+  if(method==="session_timeline")return previewTimeline(p);
+  if(method==="highlight_settings")return {...highlightSettings};
+  if(method==="highlight_configure"){
+    highlightSettings={base_url:p.base_url,model:p.model||"",key_configured:p.clear_key?false:Boolean(p.api_key)||highlightSettings.key_configured};return {...highlightSettings};
+  }
+  if(method==="highlight_models")return {models:[{id:"demo-interaction-model"},{id:"demo-reasoning-model"}],model:highlightSettings.model};
+  if(method==="highlight_analyze"){
+    const data=previewTimeline(p);const job_id=`preview-${Date.now()}`;
+    const highlights=[.2,.48,.76].map((fraction,index)=>{const message=data.messages[Math.floor(data.messages.length*fraction)];return {offset_seconds:message.offset_seconds,title:["观众提问引出操作讲解","连续配合引发讨论","轻松失误带来笑点"][index],reason:["多位观众连续追问操作方式，出现相关回应。","聊天从单句喝彩转为讨论配合细节。","多位观众围绕同一失误接话，形成有趣讨论。"][index],evidence:[{...message,message_id:message.id}]};});
+    highlightJobs.set(job_id,{job_id,status:"completed",anchor_id:p.anchor_id,session_id:p.session_id,result:{highlights,summary:"观众提问、配合讨论和轻松失误形成三段可回看的互动。",model:highlightSettings.model,analyzed_messages:data.total_messages,snapshot_end_epoch:data.end_epoch}});
+    return {job_id,status:"running"};
+  }
+  if(method==="highlight_status")return highlightJobs.get(p.job_id)||{job_id:p.job_id,status:"cancelled"};
+  if(method==="highlight_cancel"){highlightJobs.delete(p.job_id);return {job_id:p.job_id,status:"cancelled"};}
   if (method === "refresh_viewers") {
     const items=anchors.filter(a=>a.active&&a.is_live);
     viewerRefreshStatus={id:String(Date.now()),active:false,total:items.length,checked:items.length,updated:items.length,failed:0,skipped:0};
@@ -181,13 +277,14 @@ export async function previewBridge(method, p = {}) {
   }
   if (method === "viewer_refresh_status")return viewerRefreshStatus;
   if (method === "poll") {
-    const ev = emitted ? [] : events;
+    const ev = emitted ? [] : [...events];
     emitted = true;
-    return { ...snapshot(), events: ev };
+    if(debugLogging)ev.push({seq:++seq,kind:"status",rid:anchors[148].rid,name:anchors[148].name,state:"offline",detail:"尚未开播，等待下次查询",timestamp:new Date().toISOString()});
+    return { ...snapshot(p.include_proxy !== false), events: ev };
   }
   if (method === "quality_sessions") {
     const anchor=anchors.find(a=>a.anchor_id===p.anchor_id);
-    const sessions=Array.from({length:25},(_,i)=>({anchor_id:p.anchor_id,session_id:i===0?anchor.session_id:String(7000000000000000000n+BigInt(i)),anchor_name:anchor.name,started_at:`2026-10-${String(16-i%15).padStart(2,"0")}T12:00:00+08:00`,first_seen:"2026-10-16T12:30:00+08:00",coverage:i<2?"partial":"unknown",monitor_seconds:3600+i*133,speakers:i===2?0:320+i*7,valid_speakers:i===2?0:168+i*3,valid_speaker_rate:i===2?null:(168+i*3)/(320+i*7),analysis_state:i===1?"analyzing":"ready",chat_messages:1000+i*20,valid_messages:600,unknown_sender_messages:0,pending:i===1?40:0,job_state:i===1?"queued":"",generation:1,records_cleared:false,peak_viewers:i===2?null:1280+i*20,minute_avg_viewers:i===2?null:840+i*15,audience_sample_minutes:i===2?0:60+i,valid_speakers_to_online_rate:i===2?null:(168+i*3)/(840+i*15)})).filter(row=>!p.month||row.started_at.startsWith(p.month));
+    const sessions=Array.from({length:25},(_,i)=>({anchor_id:p.anchor_id,session_id:i===0?anchor.session_id:String(7000000000000000000n+BigInt(i)),anchor_name:anchor.name,started_at:i===0?new Date(anchor.broadcast_started_at*1000).toISOString():`${new Date(Date.UTC(2026,9,23-i)).toISOString().slice(0,10)}T12:00:00+08:00`,first_seen:"2026-10-23T12:30:00+08:00",coverage:i<2?"partial":"unknown",monitor_seconds:3600+i*133,speakers:i===2?0:320+i*7,valid_speakers:i===2?0:168+i*3,valid_speaker_rate:i===2?null:(168+i*3)/(320+i*7),analysis_state:i===1?"analyzing":"ready",chat_messages:1000+i*20,valid_messages:600,unknown_sender_messages:0,pending:i===1?40:0,job_state:i===1?"queued":"",generation:1,records_cleared:false,peak_viewers:i===2?null:1280+i*20,minute_avg_viewers:i===2?null:840+i*15,audience_sample_minutes:i===2?0:60+i,valid_speakers_to_online_rate:i===2?null:(168+i*3)/(840+i*15)})).filter(row=>!p.month||row.started_at.startsWith(p.month));
     const offset=p.offset||0,limit=p.limit||20;
     return {sessions:sessions.slice(offset,offset+limit),total:sessions.length,next_offset:offset+limit<sessions.length?offset+limit:null,rules:{window_seconds:60,self_count:3,crowd_count:20,crowd_users:10,session_count:50,session_users:20},worker:{available:true,retrying:false}};
   }
@@ -265,9 +362,13 @@ export async function previewBridge(method, p = {}) {
     return {accepted:true,refresh:previewBatch()};
   }
   if (method === "add_anchors") {
+    if (p.tags !== undefined && !Array.isArray(p.tags)) throw Error("标签格式无效，请提供标签列表");
+    const tags = p.tags === undefined ? [] : normalizeTags(p.tags);
+    if (typeof p.values !== "string") throw Error("请输入直播间链接或房间号");
+    let added = 0;
     for (const value of p.values.split(/\s+/)) {
       const rid = value.match(/\d{5,}/)?.[0];
-      if (rid && !anchors.some((a) => a.rid === rid))
+      if (rid && !anchors.some((a) => a.rid === rid)) {
         anchors.push({
           rid,
           name: rid,
@@ -277,8 +378,20 @@ export async function previewBridge(method, p = {}) {
           message_count: 0,
           detail: "尚未启动监控",
         });
+        tagsByRoom.set(rid, [...tags]);
+        added++;
+      }
     }
-    return { added: 1 };
+    return { added };
+  }
+  if (method === "set_anchor_tags") {
+    if (!Array.isArray(p.tags)) throw Error("标签格式无效，请提供标签列表");
+    const tags = normalizeTags(p.tags);
+    if (!Array.isArray(p.rids) || !p.rids.length || p.rids.some(rid => typeof rid !== "string" || !rid)) throw Error("请先选择主播");
+    const rids = new Set(p.rids), selected = anchors.filter(anchor => rids.has(anchor.rid));
+    if (selected.length !== rids.size) throw Error("主播不存在，请刷新后重试");
+    for (const anchor of selected) (anchor.anchor_id ? tagsByAnchor : tagsByRoom).set(anchor.anchor_id || anchor.rid, [...tags]);
+    return { saved: true, updated: selected.length, tags: [...tags] };
   }
   if (method === "start" || method === "stop") {
     anchors

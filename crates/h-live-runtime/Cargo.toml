@@ -28,6 +28,8 @@ base64 = "0.22"
 sha2 = "0.10"
 percent-encoding = "2"
 csv = "1"
+rusqlite.workspace = true
+zip.workspace = true
 flate2 = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.dependencies]
@@ -37,7 +39,6 @@ windows-sys = { version = "0.61", features = ["Win32_Security_Cryptography", "Wi
 libc = "0.2"
 
 [dev-dependencies]
-rusqlite.workspace = true
 rcgen = "0.14"
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 

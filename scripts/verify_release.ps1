@@ -17,7 +17,8 @@ try {
     $installer = Join-Path $cdn "$version/$filename"
     $signature = $installer + '.sig'
     $platform = $manifest.platforms.'windows-x86_64'
-    $base = 'https://assets.checkpoint321.com/lilith/qingkan-live/'
+    $site = Get-Content release-site/publishing.json -Raw | ConvertFrom-Json
+    $base = $site.url.TrimEnd('/') + $site.base_path.TrimEnd('/') + '/'
     $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
     $checks = [ordered]@{
         versions_match = ($config.version -eq $version -and $manifest.version -eq $version -and

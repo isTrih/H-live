@@ -3,5 +3,6 @@
   "identifier": "main-window",
   "description": "Local desktop window; all backend access uses restricted Rust commands.",
   "windows": ["main"],
+  "webviews": ["main", "replay-overlay"],
   "permissions": ["core:default", "core:window:allow-start-dragging", "updater:allow-check", "updater:allow-download", "updater:allow-install"]
 }

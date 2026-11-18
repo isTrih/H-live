@@ -2,6 +2,9 @@ param([string]$SigningKey = '')
 $ErrorActionPreference = 'Stop'
 $releaseRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $releaseVersion = (Get-Content -LiteralPath (Join-Path $releaseRoot 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
+$site = Get-Content -LiteralPath (Join-Path $releaseRoot 'release-site/publishing.json') -Raw | ConvertFrom-Json
+$releaseBase = $site.url.TrimEnd('/') + $site.base_path.TrimEnd('/') + '/'
+if (([uri]$releaseBase).Scheme -ne 'https') { throw 'Release base must use HTTPS.' }
 $oldSigningKey = $env:TAURI_SIGNING_PRIVATE_KEY
 $oldSigningPassword = $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 Push-Location $releaseRoot
@@ -44,10 +47,13 @@ try {
         pub_date = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
         platforms = @{'windows-x86_64' = @{
             signature = (Get-Content -LiteralPath ($setup + '.sig') -Raw -Encoding UTF8).Trim()
-            url = "https://assets.checkpoint321.com/lilith/qingkan-live/${releaseVersion}/${fileName}"
+            url = "${releaseBase}${releaseVersion}/${fileName}"
         }}
     }
     [IO.File]::WriteAllText((Join-Path $cdnRoot 'latest.json'), ($latest | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
+    # Retain this version's first declared date before the publication payload is frozen.
+    & node scripts/release_notes_data.mjs --record-manifest $releaseRoot (Join-Path $cdnRoot 'latest.json')
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot retain release date metadata.' }
     Copy-Item -LiteralPath 'docs\release\CDN_RELEASE.md' -Destination (Join-Path $cdnRoot 'UPLOAD-INSTRUCTIONS.md') -Force
     Write-Output $setup
     Write-Output "SHA256 $hash"

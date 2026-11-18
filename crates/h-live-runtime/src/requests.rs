@@ -1,15 +1,15 @@
 //! Existing desktop IPC contract, now handled directly in Rust.
 use crate::{
     maintenance, proxy,
-    runtime::{id_list, proxy_snapshot, subscription_snapshot, Job, Runtime, VERSION},
+    runtime::{Job, Runtime, VERSION, id_list, proxy_snapshot, subscription_snapshot},
     storage::{self, Result},
 };
-use futures_util::{stream, StreamExt};
+use futures_util::{StreamExt, stream};
 use qingkan_core::{
     archive::{ArchiveDeleteFilter, CONTENT_TYPES},
     export::{self, CancelToken, ExportOptions},
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{path::PathBuf, sync::atomic::Ordering};
 
 impl Runtime {
@@ -35,6 +35,21 @@ impl Runtime {
                 | "quality_sessions"
                 | "quality_detail"
                 | "quality_settings"
+                | "session_timeline"
+                | "mark_list"
+                | "time_display_settings"
+                | "highlight_settings"
+                | "highlight_models"
+                | "highlight_status"
+                | "community_settings"
+                | "session_replay"
+                | "session_replay_timing"
+                | "clip_tools"
+                | "clip_jobs"
+                | "clip_job"
+                | "download_naming_settings"
+                | "download_naming_preview"
+                | "startup_settings"
                 | "proxy_status"
                 | "list_proxy_subscriptions"
                 | "list_imported_proxies"
@@ -49,8 +64,21 @@ impl Runtime {
         };
         self.ensure_open()?;
         match method {
+            "startup_settings" => Ok(json!({"startup_monitoring": self.shared.state.lock().unwrap().config.value["startup_monitoring"].as_bool().unwrap_or(true)})),
+            "start_on_launch" => {
+                let enabled = self.shared.state.lock().unwrap().config.value["startup_monitoring"].as_bool().unwrap_or(true);
+                self.start(if enabled { self.configured_tasks() } else { vec![] })
+            }
+            "configure_startup" => {
+                let enabled = p["startup_monitoring"].as_bool().ok_or("启动监听设置无效")?;
+                let mut s = self.shared.state.lock().unwrap();
+                let mut config = s.config.value.clone();
+                config["startup_monitoring"] = json!(enabled);
+                s.config.replace(config)?;
+                Ok(json!({"startup_monitoring":enabled}))
+            }
             "init" => Ok(
-                json!({"version":VERSION,"native_version":VERSION,"processing":"rust","anchors":self.anchors(),"archive_anchors":self.shared.archive.list_anchors().map_err(|_|"读取历史主播失败")?,"settings":self.settings(),"metrics":self.shared.metrics(),"cursor":self.shared.state.lock().unwrap().seq}),
+                json!({"version":VERSION,"native_version":VERSION,"processing":"rust","anchors":self.anchors(),"archive_anchors":self.archive_anchor_rows()?,"settings":self.settings(),"metrics":self.shared.metrics(),"cursor":self.shared.state.lock().unwrap().seq}),
             ),
             "poll" => {
                 let include_proxy = p
@@ -85,31 +113,41 @@ impl Runtime {
                         .last()
                         .and_then(|v| v["seq"].as_u64())
                         .unwrap_or(s.seq);
-                    let dropped = s
-                        .events
-                        .front()
-                        .and_then(|v| v["seq"].as_u64())
-                        .unwrap_or(s.seq + 1)
-                        .saturating_sub(after.saturating_add(1));
+                    // Hiding debug entries is intentional, not queue overflow. Only
+                    // the watermark of actually evicted events reports a lost cursor.
+                    let dropped = s.evicted_seq.saturating_sub(after);
                     let jobs = s.jobs.values().map(|j| j.value.clone()).collect::<Vec<_>>();
                     (events, cursor, dropped, jobs)
                 };
                 Ok(
-                    json!({"events":events,"cursor":cursor,"dropped":dropped,"anchors":self.anchors(),"metrics":self.shared.metrics_for(include_proxy),"export_jobs":jobs}),
+                    json!({"events":events,"cursor":cursor,"dropped":dropped,"anchors":self.anchors(),"settings":self.settings(),"metrics":self.shared.metrics_for(include_proxy),"export_jobs":jobs}),
                 )
             }
-            "archive_anchors" => serde_json::to_value(
-                self.shared
-                    .archive
-                    .list_anchors()
-                    .map_err(|_| "读取历史主播失败")?,
-            )
-            .map_err(|_| "历史主播格式无效".into()),
+            "archive_anchors" => self.archive_anchor_rows(),
             "recent_messages" => self
                 .shared
                 .archive
                 .recent_messages(p)
                 .map_err(|_| "读取实时消息失败，请检查筛选条件".into()),
+            "session_timeline" => {
+                let a = p["anchor_id"].as_str().ok_or("缺少主播 ID")?;
+                let s = p["session_id"].as_str().ok_or("缺少直播场次 ID")?;
+                self.shared
+                    .archive
+                    .session_timeline(a, s)
+                    .map_err(|_| "读取完整场次失败，请检查主播和场次".into())
+            }
+            "clip_tools" | "clip_jobs" | "clip_job" | "clip_create" | "clip_cancel" | "clip_retry" => self.clip_request(method, p),
+            "download_naming_settings" | "download_naming_save" | "download_naming_preview" => self.download_naming_request(method, p),
+            "mark_list" | "mark_create" | "mark_update" | "mark_delete" => self.mark_request(method, p),
+            "time_display_settings" | "time_display_save" => self.time_display_request(method, p),
+            "community_settings" | "community_configure" | "session_replay" | "session_replay_timing" => self.community_request(method, p),
+            "highlight_settings"
+            | "highlight_configure"
+            | "highlight_models"
+            | "highlight_analyze"
+            | "highlight_status"
+            | "highlight_cancel" => self.highlight_request(method, p),
             "quality_sessions" | "quality_detail" | "quality_settings" | "quality_rebuild"
             | "quality_pause" | "quality_configure" | "quality_commands" => {
                 if self.shared.state.lock().unwrap().deleting && mutation {
@@ -168,13 +206,11 @@ impl Runtime {
                     .clone())
             }
             "add_anchors" => {
+                let tags=p.get("tags").map(crate::anchor_tags::normalize).transpose()?;
                 let raw = if let Some(s) = p["values"].as_str() {
                     s.to_owned()
                 } else if let Some(a) = p["values"].as_array() {
-                    a.iter()
-                        .map(|v| v.as_str().unwrap_or(""))
-                        .collect::<Vec<_>>()
-                        .join("\n")
+                    a.iter().map(|v|v.as_str().ok_or_else(||"直播间列表只能包含字符串链接或 ID".to_owned())).collect::<Result<Vec<_>>>()?.join("\n")
                 } else {
                     return Err("请输入直播间链接或 ID".into());
                 };
@@ -205,7 +241,11 @@ impl Runtime {
                 for rid in valid {
                     if config["anchors"].get(&rid).is_none() {
                         config["anchors"][&rid] = json!(format!("主播 {rid}"));
-                        added.push(rid)
+                        added.push(rid.clone());
+                        if let Some(tags)=&tags {
+                            // A newly added entrance has not confirmed its present owner yet.
+                            crate::anchor_tags::assign(&mut config,&rid,"",tags);
+                        }
                     }
                 }
                 if config["anchors"].as_object().unwrap().len() > 500 {
@@ -214,6 +254,7 @@ impl Runtime {
                 s.config.replace(config)?;
                 Ok(json!({"added":added,"invalid":invalid}))
             }
+            "set_anchor_tags" => self.set_anchor_tags(&p),
             "start" | "stop" | "remove" => {
                 let rids = id_list(&p["rids"], true)?;
                 {
@@ -240,6 +281,7 @@ impl Runtime {
                         if let Some(a) = config["pc_unsupported_rids"].as_array_mut() {
                             a.retain(|v| v != rid)
                         }
+                        if let Some(tags)=config["anchor_tags"].as_object_mut() {tags.remove(&format!("room:{rid}"));}
                     }
                     s.config.replace(config)?;
                     for rid in &rids {
@@ -288,6 +330,20 @@ impl Runtime {
                 Ok(
                     json!({"rid":rid,"pc_unsupported":flag,"pc_support_source":if flag{"manual"}else{""}}),
                 )
+            }
+            "save_settings" => {
+                let debug = p["debug_logging"]
+                    .as_bool()
+                    .ok_or("debug_logging 须为布尔值")?;
+                let mut s = self.shared.state.lock().unwrap();
+                let mut config = s.config.value.clone();
+                config["debug_logging"] = json!(debug);
+                s.config.replace(config)?;
+                if !debug {
+                    s.events.retain(|event| !crate::runtime::routine_log(event));
+                }
+                drop(s);
+                Ok(self.settings())
             }
             "configure_proxy" => {
                 let enabled = p["enabled"].as_bool().ok_or("enabled 须为布尔值")?;
@@ -508,12 +564,18 @@ impl Runtime {
     }
     fn settings(&self) -> Value {
         let s = self.shared.state.lock().unwrap();
-        json!({"max_tasks":500,"data_dir":self.shared.directory,"proxy_enabled":s.pool.enabled,"proxy_source":s.pool.source,"proxy_include_direct":s.pool.include_direct,"imported_proxy_count":s.config.value["imported_proxies"].as_array().map(|a|a.len()).unwrap_or(0),"proxy":{"mode":if s.pool.enabled{"pool"}else{"direct"},"configured":true,"supported":true}})
+        json!({"max_tasks":500,"data_dir":self.shared.directory,"debug_logging":s.config.value["debug_logging"].as_bool().unwrap_or(false),"proxy_enabled":s.pool.enabled,"proxy_source":s.pool.source,"proxy_include_direct":s.pool.include_direct,"imported_proxy_count":s.config.value["imported_proxies"].as_array().map(|a|a.len()).unwrap_or(0),"proxy":{"mode":if s.pool.enabled{"pool"}else{"direct"},"configured":true,"supported":true}})
     }
     fn delete_reason(&self, anchors: &[String]) -> String {
         let s = self.shared.state.lock().unwrap();
         if s.deleting {
             return "消息删除仍在执行".into();
+        }
+        if s.highlights
+            .values()
+            .any(|j| j.value["status"] == "running")
+        {
+            return "AI 场次分析仍在进行，请完成或取消后删除".into();
         }
         if s.rooms.values().any(|r| {
             r.value["active"] == true

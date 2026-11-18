@@ -1,6 +1,6 @@
 {
   "name": "h-live",
-  "version": "0.3.2",
+  "version": "0.4.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,11 +8,13 @@
     "build": "vite build",
     "build:server": "vite build --mode server",
     "tauri": "tauri",
-    "desktop:build": "tauri build --no-bundle"
+    "desktop:build": "tauri build --no-bundle",
+    "release": "pwsh -NoProfile -File scripts/release.ps1"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.3",
-    "@tauri-apps/plugin-updater": "2.13.3"
+    "@tauri-apps/plugin-updater": "2.13.3",
+    "hls.js": "1.7.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.2",

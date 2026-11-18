@@ -26,6 +26,7 @@ impl App {
 // Both read and write endpoints use bounded JSON bodies (avoids sensitive URL query logs).
 pub const ENDPOINTS: &[(&str, &str, bool)] = &[
     ("state", "init", false),
+    ("settings", "save_settings", true),
     ("events/poll", "poll", false),
     ("messages/recent", "recent_messages", false),
     ("archives/anchors", "archive_anchors", false),
@@ -36,6 +37,7 @@ pub const ENDPOINTS: &[(&str, &str, bool)] = &[
     ("anchors/import", "add_anchors", true),
     ("anchors/remove", "remove", true),
     ("anchors/rename", "rename", true),
+    ("anchors/tags", "set_anchor_tags", true),
     ("anchors/pc-support", "set_pc_unsupported", true),
     ("monitor/start", "start", true),
     ("monitor/stop", "stop", true),
@@ -59,6 +61,25 @@ pub const ENDPOINTS: &[(&str, &str, bool)] = &[
     ("analysis/pause", "quality_pause", true),
     ("analysis/configure", "quality_configure", true),
     ("analysis/commands", "quality_commands", true),
+    ("analysis/timeline", "session_timeline", false),
+    ("marks/list", "mark_list", false),
+    ("marks/create", "mark_create", true),
+    ("marks/update", "mark_update", true),
+    ("marks/delete", "mark_delete", true),
+    ("highlights/settings", "highlight_settings", false),
+    ("highlights/configure", "highlight_configure", true),
+    ("highlights/models", "highlight_models", true),
+    ("highlights/analyze", "highlight_analyze", true),
+    ("highlights/status", "highlight_status", false),
+    ("highlights/cancel", "highlight_cancel", true),
+    ("community/settings", "community_settings", false),
+    ("community/configure", "community_configure", true),
+    // Lookup uses an upstream admin credential, so cookie clients must pass
+    // the same origin/CSRF checks as other credentialed network operations.
+    ("replays/session", "session_replay", true),
+    ("replays/session/timing", "session_replay_timing", true),
+    ("replays/time-display", "time_display_settings", false),
+    ("replays/time-display/save", "time_display_save", true),
     ("exports/messages", "export", true),
     ("exports/analysis", "quality_export", true),
     ("exports/cancel", "cancel_export", true),
@@ -151,7 +172,7 @@ async fn headers(req: &mut Request, depot: &mut Depot, res: &mut Response, ctrl:
         .insert("referrer-policy", "no-referrer".parse().unwrap());
     res.headers_mut()
         .insert("x-frame-options", "DENY".parse().unwrap());
-    res.headers_mut().insert("content-security-policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'".parse().unwrap());
+    res.headers_mut().insert("content-security-policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.xingtu.cn https://*.bytefcdn.com https://*.douyinvod.com https://*.douyincdn.com https://*.bytevcloud.com https://*.bytetos.com; media-src 'self' blob: https://*.xingtu.cn https://*.bytefcdn.com https://*.douyinvod.com https://*.douyincdn.com https://*.bytevcloud.com https://*.bytetos.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'".parse().unwrap());
     ctrl.call_next(req, depot, res).await;
 }
 #[handler]

@@ -1,0 +1,276 @@
+{
+  "format": 1,
+  "time_zone": "Asia/Shanghai",
+  "versions": {
+    "0.1.0": {
+      "date": null,
+      "source": {
+        "kind": "unrecorded",
+        "note": "保留的首版日志没有发布日期；2026-10-16 的源码基线提交不能证明首版发布时间。"
+      }
+    },
+    "0.1.1": {
+      "date": null,
+      "source": {
+        "kind": "unrecorded",
+        "note": "日志和 CHANGELOG 未记日期；未发现该版发行清单或带时间的发布回执。"
+      }
+    },
+    "0.2.0": {
+      "date": null,
+      "source": {
+        "kind": "unrecorded",
+        "note": "日志和 CHANGELOG 未记日期；未发现该版发行清单或带时间的发布回执。"
+      }
+    },
+    "0.2.1": {
+      "date": null,
+      "source": {
+        "kind": "unrecorded",
+        "note": "日志和 CHANGELOG 未记日期；未发现该版发行清单或带时间的发布回执。"
+      }
+    },
+    "0.2.2": {
+      "date": "2026-10-16",
+      "source": {
+        "kind": "changelog",
+        "path": "CHANGELOG.md",
+        "field": "heading: 0.2.2",
+        "value": "2026-10-16"
+      }
+    },
+    "0.2.3": {
+      "date": "2026-10-16",
+      "source": {
+        "kind": "changelog",
+        "path": "CHANGELOG.md",
+        "field": "heading: 0.2.3",
+        "value": "2026-10-16"
+      }
+    },
+    "0.2.4": {
+      "date": "2026-10-16",
+      "source": {
+        "kind": "changelog",
+        "path": "CHANGELOG.md",
+        "field": "heading: 0.2.4",
+        "value": "2026-10-16"
+      }
+    },
+    "0.3.0": {
+      "date": "2026-10-17",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/QingkanLive-0.3.0-cdn.zip!latest.json",
+        "field": "pub_date",
+        "value": "2026-10-16T16:00:06Z",
+        "corroboration": "git annotated tag v0.3.0: 2026-10-17T00:01:16+08:00"
+      }
+    },
+    "0.3.1": {
+      "date": "2026-10-19",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/QingkanLive-0.3.1-cdn.zip!latest.json",
+        "field": "pub_date",
+        "value": "2026-10-19T05:25:07Z"
+      }
+    },
+    "0.3.2": {
+      "date": "2026-10-20",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/QingkanLive-0.3.2-cdn.zip!latest.json",
+        "field": "pub_date",
+        "value": "2026-10-20T07:22:13Z",
+        "note": "发行清单为 10/20；CHANGELOG 段落写 10/19，采用该版清单声明日期，git ca12e0c 的构建准备也在 10/20。"
+      }
+    },
+    "0.3.3": {
+      "date": "2026-10-23",
+      "source": {
+        "kind": "changelog",
+        "path": "CHANGELOG.md",
+        "field": "heading: 0.3.3",
+        "value": "2026-10-23"
+      }
+    },
+    "0.3.4": {
+      "date": "2026-10-23",
+      "source": {
+        "kind": "changelog",
+        "path": "CHANGELOG.md",
+        "field": "heading: 0.3.4",
+        "value": "2026-10-23"
+      }
+    },
+    "0.3.5": {
+      "date": "2026-10-23",
+      "source": {
+        "kind": "changelog",
+        "path": "CHANGELOG.md",
+        "field": "heading: 0.3.5",
+        "value": "2026-10-23"
+      }
+    },
+    "0.3.6": {
+      "date": "2026-10-23",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/legacy-cdn/qingkan-live/latest.json",
+        "field": "pub_date",
+        "value": "2026-10-23T13:05:42Z",
+        "corroboration": "CHANGELOG.md: heading 0.3.6 — 2026-10-23"
+      }
+    },
+    "0.3.7": {
+      "date": "2026-10-23",
+      "source": {
+        "kind": "verified-deployment",
+        "path": "build/release-0.3.7-publish-resume.log",
+        "field": "deployment.created_at",
+        "value": "2026-10-23 22:23:04.857895+08",
+        "deployment_id": "dep_99600dd22b44943bcb82fe03",
+        "corroboration": "build/sites-publication-0.3.7.json: matching deployment_id, verified=true; resume log phase=succeeded",
+        "note": "采用已验证成功部署的创建日期；回执未保存完成时间。"
+      }
+    },
+    "0.3.8": {
+      "date": "2026-10-23",
+      "source": {
+        "kind": "verified-deployment",
+        "path": "build/release-0.3.8-publish.log",
+        "field": "deployment.created_at",
+        "value": "2026-10-23 22:27:05.534736+08",
+        "deployment_id": "dep_a7f5855e9e1e760356f37818",
+        "corroboration": "build/sites-publication-0.3.8.json: matching deployment_id, verified=true",
+        "note": "采用已验证成功部署的创建日期；回执未保存完成时间。"
+      }
+    },
+    "0.3.9": {
+      "date": "2026-10-23",
+      "source": {
+        "kind": "verified-deployment",
+        "path": "build/release-0.3.9-publish.log",
+        "field": "deployment.created_at",
+        "value": "2026-10-23 22:47:45.167726+08",
+        "deployment_id": "dep_c91c1f1a96ad30739daee9c9",
+        "corroboration": "build/sites-publication-0.3.9.json: matching deployment_id, verified=true",
+        "note": "采用已验证成功部署的创建日期；回执未保存完成时间。"
+      }
+    },
+    "0.4.0": {
+      "date": "2026-10-24",
+      "source": {
+        "kind": "manifest",
+        "path": "build/sites-manual-upload-current.json",
+        "field": "feed.pub_date",
+        "value": "2026-10-23T16:11:41Z",
+        "note": "采用手动上传后的站点清单；更早失败部署与旧包不作为成功站点日期。"
+      }
+    },
+    "0.4.1": {
+      "date": "2026-10-24",
+      "source": {
+        "kind": "publication-verification",
+        "path": "build/sites-publication-0.4.1.json",
+        "field": "verified_at",
+        "value": "2026-10-23T17:18:24.445Z",
+        "note": "成功发布验证日期；未保存精确上线时间。"
+      }
+    },
+    "0.4.2": {
+      "date": "2026-10-24",
+      "source": {
+        "kind": "manifest",
+        "path": ".release-secrets/release-attempts/0.4.2-unsubmitted-2026-10-25T11-03-42.798Z-aca5af7c/site/latest.json",
+        "field": "pub_date",
+        "value": "2026-10-23T17:49:22Z",
+        "note": "保留的发行清单声明日期。此尝试标记为 unsubmitted，没有该版站点成功发布回执，不代表已上线。"
+      }
+    },
+    "0.4.3": {
+      "date": "2026-10-25",
+      "source": {
+        "kind": "publication-verification",
+        "path": "build/sites-publication-0.4.3.json",
+        "field": "verified_at",
+        "value": "2026-10-25T11:11:09.274Z",
+        "note": "成功发布验证日期；未保存精确上线时间。"
+      }
+    },
+    "0.4.4": {
+      "date": "2026-10-26",
+      "source": {
+        "kind": "publication-verification",
+        "path": "build/sites-publication-0.4.4.json",
+        "field": "verified_at",
+        "value": "2026-10-26T06:14:33.945Z",
+        "note": "成功发布验证日期；未保存精确上线时间。"
+      }
+    },
+    "0.4.5": {
+      "date": "2026-10-26",
+      "source": {
+        "kind": "manifest",
+        "path": "release-site/latest.json",
+        "field": "pub_date",
+        "value": "2026-10-26T06:39:31Z"
+      }
+    },
+    "0.4.6": {
+      "date": "2026-10-26",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/cdn/qingkan-live/latest.json",
+        "field": "pub_date",
+        "value": "2026-10-26T12:14:20Z"
+      }
+    },
+    "0.4.7": {
+      "date": "2026-10-27",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/cdn/qingkan-live/latest.json",
+        "field": "pub_date",
+        "value": "2026-10-27T08:20:05Z"
+      }
+    },
+    "0.4.8": {
+      "date": "2026-10-27",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/cdn/qingkan-live/latest.json",
+        "field": "pub_date",
+        "value": "2026-10-27T11:30:49Z"
+      }
+    },
+    "0.4.9": {
+      "date": "2026-11-02",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/cdn/qingkan-live/latest.json",
+        "field": "pub_date",
+        "value": "2026-11-02T08:44:13Z"
+      }
+    },
+    "0.4.10": {
+      "date": "2026-11-02",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/cdn/qingkan-live/latest.json",
+        "field": "pub_date",
+        "value": "2026-11-02T09:26:02Z"
+      }
+    },
+    "0.4.11": {
+      "date": "2026-11-02",
+      "source": {
+        "kind": "manifest",
+        "path": "dist/cdn/qingkan-live/latest.json",
+        "field": "pub_date",
+        "value": "2026-11-02T10:49:55Z"
+      }
+    }
+  }
+}

@@ -1,6 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { live, offline, status, selectAnchors, duration, viewerCount, compactViewerCount, pcUnsupported, messageConnection } from "./model.js";
+import {UNTAGGED_TAG} from "../../anchor-tags.js";
+
+test("anchor tags combine with status and search without mixing untagged or same-named groups", () => {
+  const anchors = [
+    {rid:"1",name:"主播甲",anchor_id:"101",active:true,is_live:true,state:"connected",tags:["重点关注","游戏"]},
+    {rid:"2",name:"主播乙",anchor_id:"102",active:true,is_live:false,state:"offline",tags:["重点关注"]},
+    {rid:"3",name:"主播丙",anchor_id:"103",state:"stopped",tags:["无标签"]},
+    {rid:"4",name:"旧主播",anchor_id:"104",state:"stopped"},
+  ];
+  assert.deepEqual(selectAnchors(anchors,"","all","重点关注").map(a=>a.rid),["1","2"]);
+  assert.deepEqual(selectAnchors(anchors,"","offline","重点关注").map(a=>a.rid),["2"]);
+  assert.deepEqual(selectAnchors(anchors,"游戏").map(a=>a.rid),["1"]);
+  assert.deepEqual(selectAnchors(anchors,"102","all","游戏"),[]);
+  assert.deepEqual(selectAnchors(anchors,"","all",UNTAGGED_TAG).map(a=>a.rid),["4"]);
+  assert.deepEqual(selectAnchors(anchors,"","all","无标签").map(a=>a.rid),["3"]);
+  assert.deepEqual(anchors.map(a=>a.rid),["1","2","3","4"]);
+});
 
 test('compact card audience keeps large readings inside their metric column',()=>{
   const a={active:true,is_live:true,state:'connected',viewer_count:123456};

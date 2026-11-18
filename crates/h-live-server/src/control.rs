@@ -1,7 +1,7 @@
 //! One bounded actor owns the synchronous runtime, including construction and drop.
 use fs2::FileExt;
 use h_live_runtime::{
-    Runtime,
+    CommunityReplayLookup, HighlightModelDiscovery, Runtime,
     storage::{self, Result, SecretProtector},
     transport::{LiveTransport, Transport},
 };
@@ -36,6 +36,8 @@ struct Export {
 }
 enum Command {
     Request(String, Value, oneshot::Sender<Result<Value>>),
+    ModelDiscovery(oneshot::Sender<Result<HighlightModelDiscovery>>),
+    CommunityReplay(String, oneshot::Sender<Result<CommunityReplayLookup>>),
     File(String, oneshot::Sender<Result<(PathBuf, String)>>),
     Shutdown(oneshot::Sender<Result<Value>>),
 }
@@ -85,6 +87,12 @@ impl Control {
                         Ok(Command::Request(method, p, reply)) => {
                             let _ = reply.send(actor.request(&method, p));
                         }
+                        Ok(Command::ModelDiscovery(reply)) => {
+                            let _ = reply.send(actor.runtime.highlight_models_snapshot());
+                        }
+                        Ok(Command::CommunityReplay(session_id, reply)) => {
+                            let _ = reply.send(actor.runtime.community_replay_snapshot(&session_id));
+                        }
                         Ok(Command::File(id, reply)) => {
                             let _ = reply.send(actor.file(&id));
                         }
@@ -120,6 +128,36 @@ impl Control {
         }
         if !self.ready.load(Ordering::Acquire) {
             return Err("服务正在停止".into());
+        }
+        if method == "highlight_models" {
+            let (tx, rx) = oneshot::channel();
+            self.tx
+                .try_send(Command::ModelDiscovery(tx))
+                .map_err(|_| "服务繁忙，请稍后重试")?;
+            // Credentials remain in this backend-only snapshot. The slow GET
+            // must not occupy the actor that processes Stop and shutdown.
+            return rx
+                .await
+                .map_err(|_| "控制线程不可用".to_string())??
+                .fetch()
+                .await;
+        }
+        if method == "session_replay" || method == "session_replay_timing" {
+            let session_id = p["session_id"].as_str().ok_or("缺少直播场次 ID")?;
+            let (tx, rx) = oneshot::channel();
+            self.tx
+                .try_send(Command::CommunityReplay(session_id.into(), tx))
+                .map_err(|_| "服务繁忙，请稍后重试")?;
+            // The actor only snapshots configuration. The upstream replay and
+            // HLS resolution stay cancellable outside Stop/shutdown handling.
+            let lookup = rx
+                .await
+                .map_err(|_| "控制线程不可用".to_string())??;
+            return if method == "session_replay_timing" {
+                lookup.fetch_timing(p["play_url"].as_str().ok_or("缺少回放地址")?.to_owned()).await
+            } else {
+                lookup.fetch_playback().await
+            };
         }
         let (tx, rx) = oneshot::channel();
         self.tx
@@ -316,6 +354,9 @@ impl Actor {
         )
     }
     fn request(&mut self, method: &str, mut p: Value) -> Result<Value> {
+        if ["highlight_models", "session_replay", "session_replay_timing"].contains(&method) {
+            return Err("此网络操作必须通过异步控制路径执行".into());
+        }
         if ["start", "stop", "remove"].contains(&method) {
             let ids = p["rids"]
                 .as_array()

@@ -2,14 +2,14 @@
 use crate::{
     net,
     proxy::{self, ProxyRecord, Route},
-    runtime::{records, Shared},
+    runtime::{Shared, records},
     storage::{self, Result},
 };
-use futures_util::{stream, StreamExt};
+use futures_util::{StreamExt, stream};
 use serde_json::json;
 use std::{
     collections::HashSet,
-    sync::{atomic::Ordering, Arc},
+    sync::{Arc, atomic::Ordering},
 };
 
 fn spawn(shared: &Arc<Shared>, f: impl std::future::Future<Output = ()> + Send + 'static) {
@@ -46,6 +46,9 @@ pub(crate) async fn tick(shared: &Arc<Shared>, tick: u64) {
     }
     let subscriptions = {
         let s = shared.state.lock().unwrap();
+        if !s.pool.enabled {
+            return;
+        }
         s.config.value["proxy_subscriptions"]
             .as_array()
             .into_iter()
@@ -349,14 +352,16 @@ mod tests {
             s.pool.candidates.insert(new.id.clone(), new.clone());
         }
         apply_probe_result(&runtime.shared, "imported", &old, None);
-        assert!(!runtime
-            .shared
-            .state
-            .lock()
-            .unwrap()
-            .pool
-            .failed
-            .contains(&new.id));
+        assert!(
+            !runtime
+                .shared
+                .state
+                .lock()
+                .unwrap()
+                .pool
+                .failed
+                .contains(&new.id)
+        );
         runtime.shared.state.lock().unwrap().pool.candidates.clear();
         apply_probe_result(
             &runtime.shared,
@@ -364,14 +369,16 @@ mod tests {
             &old,
             Some(Route::new(Some(old.clone())).unwrap()),
         );
-        assert!(!runtime
-            .shared
-            .state
-            .lock()
-            .unwrap()
-            .pool
-            .routes
-            .contains_key(&old.id));
+        assert!(
+            !runtime
+                .shared
+                .state
+                .lock()
+                .unwrap()
+                .pool
+                .routes
+                .contains_key(&old.id)
+        );
         runtime.shutdown().unwrap();
     }
 
@@ -390,9 +397,10 @@ mod tests {
             s.pool.retired.push(route.clone());
         }
         let rt = tokio::runtime::Runtime::new().unwrap();
-        assert!(rt
-            .block_on(route.admit(false, &tokio_util::sync::CancellationToken::new()))
-            .is_err());
+        assert!(
+            rt.block_on(route.admit(false, &tokio_util::sync::CancellationToken::new()))
+                .is_err()
+        );
         apply_probe_result(&runtime.shared, "imported", &record, Some(route.clone()));
         {
             let s = runtime.shared.state.lock().unwrap();

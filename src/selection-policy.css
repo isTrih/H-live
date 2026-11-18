@@ -1,0 +1,8 @@
+/* Keep the desktop surface from selecting labels while preserving copy targets. */
+html,body,body *{-webkit-user-select:none;user-select:none}
+input,textarea,[contenteditable="true"],[contenteditable="true"] *,[data-selectable],[data-selectable] *,
+.anchor-id,.anchor-pick small,[data-detail-field="直播间入口 ID"],[data-detail-field="主播 ID"],[data-detail-field="当前场次"],
+#log-content,#log-content *,.compatibility-report pre,.compatibility-report pre *,
+.clip-job-path,.clip-job-error,.timeline-error,.error-banner,.error-banner *{
+  -webkit-user-select:text;user-select:text
+}

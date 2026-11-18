@@ -5,6 +5,62 @@ use std::{fs, path::PathBuf, process::Command};
 use tauri::Manager;
 
 #[tauri::command]
+pub(crate) async fn choose_download_directory(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let window=app.get_window("main").ok_or("窗口不可用")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        Ok(rfd::FileDialog::new().set_parent(&window).set_title("选择切片下载目录")
+            .pick_folder().map(|path|path.to_string_lossy().into_owned()))
+    }).await.map_err(|_|"无法打开目录选择对话框".to_owned())?
+}
+
+#[tauri::command]
+pub(crate) async fn choose_clip_path(
+    app: tauri::AppHandle,
+    default_name: String,
+) -> Result<Option<String>, String> {
+    let safe_name = PathBuf::from(default_name)
+        .file_name().and_then(|name| name.to_str()).unwrap_or("直播切片.mp4").to_owned();
+    let window = app.get_window("main").ok_or("窗口不可用")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let chosen = rfd::FileDialog::new().set_parent(&window)
+            .set_title("保存直播切片").add_filter("MP4 视频", &["mp4"])
+            .set_file_name(safe_name).save_file();
+        if let Some(path) = chosen {
+            if !path.extension().and_then(|v| v.to_str()).is_some_and(|v| v.eq_ignore_ascii_case("mp4")) {
+                return Err("请选择以 .mp4 结尾的文件名".into());
+            }
+            Ok(Some(path.to_string_lossy().into_owned()))
+        } else { Ok(None) }
+    }).await.map_err(|_| "无法打开保存对话框".to_owned())?
+}
+
+#[tauri::command]
+pub(crate) async fn open_clip_folder(
+    state: tauri::State<'_, std::sync::Arc<crate::backend::Backend>>,
+    path: String,
+    job_id: Option<String>,
+) -> Result<(), String> {
+    let backend = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _operation = backend.read_operation()?;
+        let runtime = backend.get()?;
+        let tasks = if let Some(id)=job_id {
+            let record=runtime.request("clip_job",json!({"job_id":id}))?;
+            json!({"jobs":[record["job"].clone()]})
+        }else{runtime.request("clip_jobs", json!({"limit":100}))?};
+        let requested = PathBuf::from(path).canonicalize().map_err(|_| "切片文件不存在")?;
+        if !requested.is_file() || !tasks["jobs"].as_array().is_some_and(|jobs| jobs.iter().any(|job| {
+            job["status"] == "completed" && job["output_path"].as_str()
+                .and_then(|p| PathBuf::from(p).canonicalize().ok()).is_some_and(|p| p == requested)
+        })) { return Err("只能打开已完成切片所在的目录".into()); }
+        #[cfg(windows)]
+        Command::new("explorer.exe").arg("/select,").arg(&requested).spawn()
+            .map_err(|_| "无法打开切片目录")?;
+        Ok(())
+    }).await.map_err(|_| "无法打开切片目录".to_owned())?
+}
+
+#[tauri::command]
 pub(crate) async fn choose_export_path(
     app: tauri::AppHandle,
     format: String,
@@ -20,7 +76,7 @@ pub(crate) async fn choose_export_path(
         .and_then(|name| name.to_str())
         .unwrap_or("直播消息")
         .to_owned();
-    let window = app.get_webview_window("main").ok_or("窗口不可用")?;
+    let window = app.get_window("main").ok_or("窗口不可用")?;
     tauri::async_runtime::spawn_blocking(move || {
         let chosen = rfd::FileDialog::new()
             .set_parent(&window)
@@ -91,7 +147,7 @@ pub(crate) fn open_live_room(rid: String) -> Result<(), String> {
 
 #[tauri::command]
 pub(crate) fn window_state(app: tauri::AppHandle) -> Result<Value, String> {
-    let window = app.get_webview_window("main").ok_or("窗口不可用")?;
+    let window = app.get_window("main").ok_or("窗口不可用")?;
     Ok(
         json!({"maximized": window.is_maximized().map_err(|_| "无法读取窗口状态")?, "focused": window.is_focused().unwrap_or(true)}),
     )
@@ -99,7 +155,7 @@ pub(crate) fn window_state(app: tauri::AppHandle) -> Result<Value, String> {
 
 #[tauri::command]
 pub(crate) fn window_action(app: tauri::AppHandle, action: String) -> Result<Value, String> {
-    let window = app.get_webview_window("main").ok_or("窗口不可用")?;
+    let window = app.get_window("main").ok_or("窗口不可用")?;
     match action.as_str() {
         "minimize" => window.minimize(),
         "toggle_maximize" => {
@@ -109,7 +165,7 @@ pub(crate) fn window_action(app: tauri::AppHandle, action: String) -> Result<Val
                 window.maximize()
             }
         }
-        "close" => window.close(), // CloseRequested performs a graceful backend shutdown.
+        "close" => window.close(), // CloseRequested hides to the notification tray.
         _ => return Err("无效的窗口操作".into()),
     }
     .map_err(|_| "无法更新窗口状态")?;

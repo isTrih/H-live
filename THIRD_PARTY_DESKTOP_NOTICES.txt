@@ -1,4 +1,4 @@
-H-live / 氢看直播 0.3.2 - Rust, JavaScript and font dependencies
+H-live / 氢看直播 0.4.11 - Rust, JavaScript and font dependencies
 Upstream notices: LICENSE and licenses/upstream. Dependency texts: licenses/.
 adler2 2.0.1: 0BSD OR MIT OR Apache-2.0
 aho-corasick 1.1.5: Unlicense OR MIT
@@ -7,6 +7,7 @@ alloc-stdlib 0.3.0: BSD-3-Clause
 anyhow 1.0.104: MIT OR Apache-2.0
 async-compression 0.4.50: MIT OR Apache-2.0
 atomic-waker 1.1.2: Apache-2.0 OR MIT
+auto-launch 0.6.0: MIT
 autocfg 1.5.1: Apache-2.0 OR MIT
 base64 0.22.1: MIT OR Apache-2.0
 base64 0.23.1: MIT OR Apache-2.0
@@ -140,6 +141,7 @@ num-conv 0.2.2: MIT OR Apache-2.0
 num-traits 0.2.19: MIT OR Apache-2.0
 once_cell 1.21.4: MIT OR Apache-2.0
 option-ext 0.2.0: MPL-2.0
+os_info 3.15.0: MIT
 parking_lot 0.12.5: MIT OR Apache-2.0
 parking_lot_core 0.9.12: MIT OR Apache-2.0
 percent-encoding 2.3.2: MIT OR Apache-2.0
@@ -225,6 +227,7 @@ tauri-build 2.7.2: Apache-2.0 OR MIT
 tauri-codegen 2.7.2: Apache-2.0 OR MIT
 tauri-macros 2.7.2: Apache-2.0 OR MIT
 tauri-plugin 2.7.1: Apache-2.0 OR MIT
+tauri-plugin-autostart 2.7.0: Apache-2.0 OR MIT
 tauri-plugin-single-instance 2.5.3: Apache-2.0 OR MIT
 tauri-plugin-updater 2.13.3: Apache-2.0 OR MIT
 tauri-runtime 2.12.1: Apache-2.0 OR MIT
@@ -259,6 +262,7 @@ tower-service 0.3.3: MIT
 tracing 0.1.44: MIT
 tracing-attributes 0.1.31: MIT
 tracing-core 0.1.36: MIT
+tray-icon 0.25.1: MIT OR Apache-2.0
 try-lock 0.2.5: MIT
 tungstenite 0.30.0: MIT OR Apache-2.0
 typeid 1.0.3: MIT OR Apache-2.0
@@ -322,5 +326,8 @@ zopfli 0.8.4: Apache-2.0
 @tauri-apps/plugin-updater 2.13.3: MIT OR Apache-2.0
 @tauri-apps/cli 2.12.2: Apache-2.0 OR MIT
 vite 8.3.4: MIT
+hls.js 1.7.3: Apache-2.0
 Unmodified fonts: Douyin Sans Bold and ChillRoundM, SIL OFL 1.1. Font copyrights/licenses are separate from the project license.
+FFmpeg 8.1.3-24-g92611900bb: shared LGPL-3.0-or-later build, separate ffmpeg/ffprobe tools. Exact source and build provenance: licenses/media-tools/source.json and build-info.txt.
+libmpv 0.41.0-dev-g0fae46954: official LGPL build, dynamically loaded. Exact source and build provenance: licenses/media-tools/native-player-source.json. Unmodified libraries may be replaced with compatible builds.
 NSIS and WebView2 retain their own notices. This distribution has no Python, PyO3, V8 or Node runtime.

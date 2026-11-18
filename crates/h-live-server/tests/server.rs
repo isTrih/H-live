@@ -49,6 +49,302 @@ async fn wait(c: &Control, check: impl Fn(&Value) -> bool) -> Value {
 }
 
 #[tokio::test]
+async fn debug_logging_settings_route_requires_authentication_and_updates_poll_settings() {
+    let d = tempfile::tempdir().unwrap();
+    let c = open(d.path());
+    let ui = tempfile::tempdir().unwrap();
+    let s = service(c.clone(), ui.path());
+    let unauthenticated = TestClient::post("http://localhost:8080/api/v1/settings")
+        .json(&json!({"debug_logging":true}))
+        .send(&s)
+        .await;
+    assert_eq!(unauthenticated.status_code, Some(StatusCode::UNAUTHORIZED));
+    let mut initial = post(&s, "state", json!({})).await;
+    assert_eq!(initial.take_json::<Value>().await.unwrap()["settings"]["debug_logging"], false);
+    let mut updated = post(&s, "settings", json!({"debug_logging":true})).await;
+    assert_eq!(updated.status_code, Some(StatusCode::OK));
+    assert_eq!(updated.take_json::<Value>().await.unwrap()["debug_logging"], true);
+    let mut poll = post(&s, "events/poll", json!({})).await;
+    assert_eq!(poll.take_json::<Value>().await.unwrap()["settings"]["debug_logging"], true);
+    let invalid = post(&s, "settings", json!({"debug_logging":"true"})).await;
+    assert_eq!(invalid.status_code, Some(StatusCode::BAD_REQUEST));
+    c.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn global_highlight_routes_keep_keys_encrypted_and_require_authentication() {
+    let d = tempfile::tempdir().unwrap();
+    let c = open(d.path());
+    let ui = tempfile::tempdir().unwrap();
+    let s = service(c.clone(), ui.path());
+    for path in [
+        "analysis/timeline",
+        "highlights/settings",
+        "highlights/configure",
+        "highlights/models",
+        "highlights/analyze",
+        "highlights/status",
+        "highlights/cancel",
+    ] {
+        let response = TestClient::post(format!("http://localhost:8080/api/v1/{path}"))
+            .json(&json!({}))
+            .send(&s)
+            .await;
+        assert_eq!(response.status_code, Some(StatusCode::UNAUTHORIZED));
+    }
+    let mut response = post(&s,"highlights/configure",json!({"base_url":"https://provider.example/v1","api_key":"synthetic-model-key","model":""})).await;
+    assert_eq!(response.status_code, Some(StatusCode::OK));
+    let public: Value = response.take_json().await.unwrap();
+    assert_eq!(public["key_configured"], true);
+    assert!(public.get("api_key").is_none());
+    assert!(!public.to_string().contains("synthetic-model-key"));
+    assert!(
+        !std::fs::read_to_string(d.path().join("config.json"))
+            .unwrap()
+            .contains("synthetic-model-key")
+    );
+    let mut response = post(&s, "highlights/settings", json!({})).await;
+    assert_eq!(response.take_json::<Value>().await.unwrap(), public);
+    c.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn community_routes_require_admin_auth_csrf_and_keep_replay_keys_private() {
+    let d = tempfile::tempdir().unwrap();
+    let c = open(d.path());
+    let ui = tempfile::tempdir().unwrap();
+    let s = service(c.clone(), ui.path());
+    for path in ["community/settings", "community/configure", "replays/session", "replays/session/timing"] {
+        let response = TestClient::post(format!("http://localhost:8080/api/v1/{path}"))
+            .json(&json!({}))
+            .send(&s)
+            .await;
+        assert_eq!(response.status_code, Some(StatusCode::UNAUTHORIZED));
+    }
+    let mut configured = post(&s, "community/configure", json!({"enabled":false,"api_key":"synthetic-community-key"})).await;
+    assert_eq!(configured.status_code, Some(StatusCode::OK));
+    let settings = configured.take_json::<Value>().await.unwrap();
+    assert_eq!(settings, json!({"enabled":false,"key_configured":true}));
+    assert!(!std::fs::read_to_string(d.path().join("config.json")).unwrap().contains("synthetic-community-key"));
+    let mut current = post(&s, "community/settings", json!({})).await;
+    assert_eq!(current.take_json::<Value>().await.unwrap(), settings);
+    let mut replay = post(&s, "replays/session", json!({"session_id":"101"})).await;
+    assert_eq!(replay.status_code, Some(StatusCode::OK));
+    assert_eq!(replay.take_json::<Value>().await.unwrap(), json!({"enabled":false,"available":false,"replay":null}));
+    let invalid = post(&s, "replays/session", json!({"session_id":"../101"})).await;
+    assert_eq!(invalid.status_code, Some(StatusCode::BAD_REQUEST));
+    let timing = post(&s, "replays/session/timing", json!({"session_id":"101","play_url":"https://v26-star.xingtu.cn/a.m3u8"})).await;
+    assert_eq!(timing.status_code, Some(StatusCode::BAD_REQUEST), "feature-off timing must fail before connecting");
+
+    let mut login = TestClient::post("http://localhost:8080/api/v1/login")
+        .add_header("origin", "http://localhost:8080", true)
+        .json(&json!({"token":URL_SAFE_NO_PAD.encode([1;32])}))
+        .send(&s)
+        .await;
+    let cookie = login.headers().get("set-cookie").unwrap().to_str().unwrap().split(';').next().unwrap().to_owned();
+    let login = login.take_json::<Value>().await.unwrap();
+    for path in ["community/configure", "replays/session", "replays/session/timing"] {
+        let response = TestClient::post(format!("http://localhost:8080/api/v1/{path}"))
+            .add_header("cookie", cookie.clone(), true)
+            .json(&json!({"session_id":"101","enabled":false}))
+            .send(&s)
+            .await;
+        assert_eq!(response.status_code, Some(StatusCode::FORBIDDEN));
+    }
+    let mut replay = TestClient::post("http://localhost:8080/api/v1/replays/session")
+        .add_header("cookie", cookie, true)
+        .add_header("origin", "http://localhost:8080", true)
+        .add_header("x-h-live-csrf", login["csrf"].as_str().unwrap(), true)
+        .json(&json!({"session_id":"101"}))
+        .send(&s)
+        .await;
+    assert_eq!(replay.status_code, Some(StatusCode::OK));
+    assert_eq!(replay.take_json::<Value>().await.unwrap()["available"], false);
+    c.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn live_marks_http_routes_require_auth_csrf_and_preserve_crud_after_stop() {
+    async fn cookie_post(
+        service: &Service,
+        path: &str,
+        params: &Value,
+        cookie: &str,
+        origin: Option<&str>,
+        csrf: Option<&str>,
+    ) -> Response {
+        let mut request = TestClient::post(format!("http://localhost:8080/api/v1/{path}"))
+            .add_header("cookie", cookie, true);
+        if let Some(origin) = origin {
+            request = request.add_header("origin", origin, true);
+        }
+        if let Some(csrf) = csrf {
+            request = request.add_header("x-h-live-csrf", csrf, true);
+        }
+        request.json(params).send(service).await
+    }
+
+    let d = tempfile::tempdir().unwrap();
+    let c = open(d.path());
+    let ui = tempfile::tempdir().unwrap();
+    let s = service(c.clone(), ui.path());
+    for path in ["marks/list", "marks/create", "marks/update", "marks/delete"] {
+        let response = TestClient::post(format!("http://localhost:8080/api/v1/{path}"))
+            .json(&json!({}))
+            .send(&s)
+            .await;
+        assert_eq!(response.status_code, Some(StatusCode::UNAUTHORIZED), "{path}");
+    }
+
+    c.request("add_anchors", json!({"values":"1"})).await.unwrap();
+    c.request("start", json!({"rids":["1"]})).await.unwrap();
+    let connected = wait(&c, |p| p["metrics"]["connected"] == 1).await;
+    let anchor = connected["anchors"][0]["anchor_id"].as_str().unwrap();
+    let session = connected["anchors"][0]["session_id"].as_str().unwrap();
+    assert_eq!(anchor, "100001");
+    assert_eq!(session, "200001");
+
+    let mut login = TestClient::post("http://localhost:8080/api/v1/login")
+        .add_header("origin", "http://localhost:8080", true)
+        .json(&json!({"token":URL_SAFE_NO_PAD.encode([1;32])}))
+        .send(&s)
+        .await;
+    assert_eq!(login.status_code, Some(StatusCode::OK));
+    let cookie = login.headers().get("set-cookie").unwrap().to_str().unwrap()
+        .split(';').next().unwrap().to_owned();
+    let login = login.take_json::<Value>().await.unwrap();
+    let csrf = login["csrf"].as_str().unwrap();
+    let create = json!({"anchor_id":anchor,"session_id":session,"title":"精彩转折","note":"稍后剪辑","request_key":"http-mark-1","marked_at_epoch":1});
+    for (path, params) in [
+        ("marks/create", create.clone()),
+        ("marks/update", json!({"id":"0123456789abcdef0123456789abcdef","title":"改名"})),
+        ("marks/delete", json!({"id":"0123456789abcdef0123456789abcdef"})),
+    ] {
+        for (origin, token) in [
+            (None, Some(csrf)),
+            (Some("http://localhost:8080"), None),
+            (Some("https://evil.example"), Some(csrf)),
+        ] {
+            let response = cookie_post(&s, path, &params, &cookie, origin, token).await;
+            assert_eq!(response.status_code, Some(StatusCode::FORBIDDEN), "{path}, origin={origin:?}, csrf_present={}", token.is_some());
+        }
+    }
+    let scope = json!({"anchor_id":anchor,"session_id":session});
+    let mut listed = cookie_post(&s, "marks/list", &scope, &cookie, None, None).await;
+    assert_eq!(listed.status_code, Some(StatusCode::OK));
+    assert_eq!(listed.take_json::<Value>().await.unwrap()["total"], 0, "rejected writes must never reach the runtime");
+
+    let before = chrono::Utc::now().timestamp_millis() as f64 / 1000.;
+    let mut created = cookie_post(&s, "marks/create", &create, &cookie, Some("http://localhost:8080"), Some(csrf)).await;
+    assert_eq!(created.status_code, Some(StatusCode::OK));
+    let created = created.take_json::<Value>().await.unwrap();
+    assert_eq!(created["created"], true);
+    let mark = &created["mark"];
+    let id = mark["id"].as_str().unwrap();
+    assert_eq!(mark["anchor_id"], anchor);
+    assert_eq!(mark["session_id"], session);
+    assert!(mark["marked_at_epoch"].as_f64().unwrap() >= before, "the HTTP caller cannot override the live wall-clock time");
+
+    c.request("stop", json!({"rids":["1"]})).await.unwrap();
+    let mut retry = cookie_post(&s, "marks/create", &create, &cookie, Some("http://localhost:8080"), Some(csrf)).await;
+    assert_eq!(retry.status_code, Some(StatusCode::OK));
+    let retry = retry.take_json::<Value>().await.unwrap();
+    assert_eq!(retry["created"], false);
+    assert_eq!(retry["mark"]["id"], id, "retry after stopping is idempotent");
+
+    let mut listed = post(&s, "marks/list", scope.clone()).await;
+    assert_eq!(listed.status_code, Some(StatusCode::OK));
+    let listed = listed.take_json::<Value>().await.unwrap();
+    assert_eq!(listed["total"], 1);
+    assert_eq!(listed["marks"][0]["id"], id);
+    let mut updated = cookie_post(&s, "marks/update", &json!({"id":id,"title":"精选片段","note":"记录补充\n下一行"}), &cookie, Some("http://localhost:8080"), Some(csrf)).await;
+    assert_eq!(updated.status_code, Some(StatusCode::OK));
+    let updated = updated.take_json::<Value>().await.unwrap();
+    assert_eq!(updated["mark"]["title"], "精选片段");
+    assert_eq!(updated["mark"]["note"], "记录补充\n下一行");
+    assert_eq!(updated["mark"]["marked_at_epoch"], mark["marked_at_epoch"]);
+    let mut deleted = cookie_post(&s, "marks/delete", &json!({"id":id}), &cookie, Some("http://localhost:8080"), Some(csrf)).await;
+    assert_eq!(deleted.status_code, Some(StatusCode::OK));
+    assert_eq!(deleted.take_json::<Value>().await.unwrap()["deleted"], true);
+    let mut listed = post(&s, "marks/list", scope).await;
+    assert_eq!(listed.take_json::<Value>().await.unwrap()["total"], 0);
+    c.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn slow_authenticated_model_discovery_does_not_block_monitor_stop() {
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpListener,
+        sync::oneshot,
+    };
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}/v1", listener.local_addr().unwrap());
+    let (accepted_tx, accepted_rx) = oneshot::channel();
+    let (release_tx, release_rx) = oneshot::channel();
+    let upstream = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut request = Vec::new();
+        while !request.windows(4).any(|w| w == b"\r\n\r\n") {
+            let mut bytes = [0u8; 1024];
+            let count = socket.read(&mut bytes).await.unwrap();
+            assert!(count > 0);
+            request.extend_from_slice(&bytes[..count]);
+        }
+        assert!(String::from_utf8_lossy(&request).starts_with("GET /v1/models HTTP/1.1"));
+        accepted_tx.send(()).unwrap();
+        release_rx.await.unwrap();
+        let body = json!({"data":[{"id":"slow-model"}]}).to_string();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        );
+        socket.write_all(response.as_bytes()).await.unwrap();
+    });
+    let d = tempfile::tempdir().unwrap();
+    let c = open(d.path());
+    let ui = tempfile::tempdir().unwrap();
+    let s = service(c.clone(), ui.path());
+    c.request("add_anchors", json!({"values":"1"}))
+        .await
+        .unwrap();
+    c.request("start", json!({"rids":["1"]})).await.unwrap();
+    wait(&c, |p| p["metrics"]["connected"] == 1).await;
+    let configured = post(
+        &s,
+        "highlights/configure",
+        json!({"base_url":base,"api_key":"synthetic-key","model":""}),
+    )
+    .await;
+    assert_eq!(configured.status_code, Some(StatusCode::OK));
+    let models = post(&s, "highlights/models", json!({}));
+    tokio::pin!(models);
+    tokio::select! {
+        _=&mut models=>panic!("model discovery completed before the upstream was released"),
+        accepted=accepted_rx=>accepted.unwrap(),
+    }
+    // The provider response is held while the authenticated Stop route must
+    // finish through the same server actor, so this catches actor serialization.
+    let stopped = tokio::time::timeout(
+        Duration::from_secs(1),
+        post(&s, "monitor/stop", json!({"rids":["1"]})),
+    )
+    .await;
+    release_tx.send(()).unwrap();
+    let mut models = models.await;
+    assert_eq!(models.status_code, Some(StatusCode::OK));
+    assert_eq!(
+        models.take_json::<Value>().await.unwrap()["models"],
+        json!([{"id":"slow-model"}])
+    );
+    let mut stopped = stopped.expect("server Stop was blocked by model discovery");
+    assert_eq!(stopped.status_code, Some(StatusCode::OK));
+    assert_eq!(stopped.take_json::<Value>().await.unwrap()["accepted"], 1);
+    upstream.await.unwrap();
+    c.shutdown().await.unwrap();
+}
+
+#[tokio::test]
 async fn cookie_auth_requires_origin_csrf_and_revocation() {
     let d = tempfile::tempdir().unwrap();
     let c = open(d.path());

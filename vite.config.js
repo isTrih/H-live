@@ -12,5 +12,7 @@ export default defineConfig(({mode}) => ({
       '**/.venv/**', '**/.release-secrets/**',
     ] },
   },
-  build: { outDir: mode === 'server' ? 'dist-web' : 'dist-ui', emptyOutDir: true, target: 'es2021' },
+  build: { outDir: mode === 'server' ? 'dist-web' : 'dist-ui', emptyOutDir: true, target: 'es2021',
+    rolldownOptions:{input:{main:'index.html',replayOverlay:'replay-overlay.html'}},
+  },
 }));

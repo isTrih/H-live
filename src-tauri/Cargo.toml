@@ -1,6 +1,6 @@
 [package]
 name = "douyin-live-monitor"
-version = "0.3.2"
+version = "0.4.11"
 description = "氢看直播 · 多主播直播间消息监控"
 edition = "2021"
 license = "MIT"
@@ -13,14 +13,15 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 h-live-runtime = { path = "../crates/h-live-runtime" }
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon", "unstable"] }
+tauri-plugin-autostart = "2.7"
 tauri-plugin-single-instance = "2"
 serde_json = "1"
 rfd = "0.17"
 tauri-plugin-updater = "2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_Shell"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_LibraryLoader", "Win32_Graphics_Gdi"] }
 
 [profile.release]
 opt-level = "s"

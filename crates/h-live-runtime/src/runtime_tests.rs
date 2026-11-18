@@ -42,6 +42,49 @@ fn until(r: &Runtime, check: impl Fn(&Value) -> bool) -> Value {
         std::thread::sleep(Duration::from_millis(40));
     }
 }
+
+struct DeferredRoomSimulation {
+    simulation: Simulation,
+    defer_rooms: std::sync::atomic::AtomicBool,
+}
+impl crate::transport::Transport for DeferredRoomSimulation {
+    fn visitor<'a>(
+        &'a self,
+        route: &'a crate::proxy::Route,
+        cancel: &'a tokio_util::sync::CancellationToken,
+    ) -> futures_util::future::BoxFuture<'a, Result<crate::net::Visitor, crate::net::Error>> {
+        crate::transport::Transport::visitor(&self.simulation, route, cancel)
+    }
+    fn room<'a>(
+        &'a self,
+        route: &'a crate::proxy::Route,
+        visitor: &'a crate::net::Visitor,
+        rid: &'a str,
+        cancel: &'a tokio_util::sync::CancellationToken,
+    ) -> futures_util::future::BoxFuture<'a, Result<crate::net::RoomInfo, crate::net::Error>> {
+        Box::pin(async move {
+            if self.defer_rooms.load(std::sync::atomic::Ordering::Acquire) {
+                cancel.cancelled().await;
+                Err(crate::net::Error::Cancelled)
+            } else {
+                crate::transport::Transport::room(&self.simulation, route, visitor, rid, cancel)
+                    .await
+            }
+        })
+    }
+    fn connect<'a>(
+        &'a self,
+        route: Arc<crate::proxy::Route>,
+        visitor: &'a crate::net::Visitor,
+        rid: &'a str,
+        cancel: &'a tokio_util::sync::CancellationToken,
+    ) -> futures_util::future::BoxFuture<
+        'a,
+        Result<Box<dyn crate::transport::MessageSocket>, crate::net::Error>,
+    > {
+        crate::transport::Transport::connect(&self.simulation, route, visitor, rid, cancel)
+    }
+}
 #[test]
 fn concurrent_rooms_share_one_anonymous_visitor_per_exit() {
     let d = tempfile::tempdir().unwrap();
@@ -195,6 +238,368 @@ fn offline_poll_starts_at_thirty_seconds_restart_resets_and_live_preferences_per
     assert!(cache["aliases"].get("3").is_none()); // An offline response is never a learned live slot.
 }
 #[test]
+fn restarting_then_monitoring_an_offline_room_preserves_its_archived_identity() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 1,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    first.request("add_anchors", json!({"values":"1"})).unwrap();
+    first.request("start", json!({"rids":["1"]})).unwrap();
+    let live = until(&first, |p| {
+        p["anchors"][0]["message_count"].as_u64().unwrap_or(0) >= 2
+    });
+    assert_eq!(live["anchors"][0]["anchor_id"], "100001");
+    assert_eq!(live["anchors"][0]["session_id"], "200001");
+    first.shutdown().unwrap();
+    drop(first);
+
+    let restarted = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 0,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    let init = restarted.request("init", json!({})).unwrap();
+    let archived_anchor = init["archive_anchors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|anchor| anchor["web_rid"] == "1")
+        .unwrap();
+    assert_eq!(archived_anchor["anchor_id"], "100001");
+    assert_eq!(
+        init["anchors"][0]["anchor_id"],
+        archived_anchor["anchor_id"]
+    );
+    assert!(init["anchors"][0]["is_live"].is_null());
+    assert_eq!(init["anchors"][0]["active"], false);
+    assert_ne!(init["anchors"][0]["duration_running"], true);
+
+    restarted.request("start", json!({"rids":["1"]})).unwrap();
+    let offline = until(&restarted, |p| p["anchors"][0]["state"] == "offline");
+    let anchor = &offline["anchors"][0];
+    assert_eq!(anchor["is_live"], false);
+    assert_ne!(anchor["duration_running"], true);
+    assert_eq!(
+        anchor["anchor_id"], archived_anchor["anchor_id"],
+        "offline monitoring must retain the saved identity used by the archive"
+    );
+    let sessions = restarted
+        .request("quality_sessions", json!({"anchor_id":anchor["anchor_id"]}))
+        .unwrap();
+    assert_eq!(sessions["total"], 1);
+    assert_eq!(sessions["sessions"][0]["session_id"], "200001");
+    let timeline = restarted
+        .request(
+            "session_timeline",
+            json!({"anchor_id":anchor["anchor_id"],"session_id":sessions["sessions"][0]["session_id"]}),
+        )
+        .unwrap();
+    assert!(timeline["chat_count"].as_u64().unwrap() >= 2);
+    restarted.shutdown().unwrap();
+    drop(restarted);
+
+    let reopened = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 0,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    let init = reopened.request("init", json!({})).unwrap();
+    assert_eq!(init["anchors"][0]["anchor_id"], "100001");
+    assert!(init["anchors"][0]["is_live"].is_null());
+    reopened.shutdown().unwrap();
+}
+#[test]
+fn restarting_repairs_missing_or_empty_room_metadata_from_the_archive() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 1,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    first.request("add_anchors", json!({"values":"1"})).unwrap();
+    first.request("start", json!({"rids":["1"]})).unwrap();
+    until(&first, |p| {
+        p["anchors"][0]["message_count"].as_u64().unwrap_or(0) >= 2
+    });
+    first.shutdown().unwrap();
+    drop(first);
+
+    for missing in [true, false] {
+        let config_path = dir.path().join("config.json");
+        let mut config: Value =
+            serde_json::from_slice(&std::fs::read(&config_path).unwrap()).unwrap();
+        if missing {
+            config.as_object_mut().unwrap().remove("anchor_metadata");
+        } else {
+            config["anchor_metadata"] = json!({"1":{"anchor_id":"","session_id":""}});
+        }
+        std::fs::write(&config_path, serde_json::to_vec(&config).unwrap()).unwrap();
+
+        let reopened = Runtime::open_with_transport(
+            dir.path().into(),
+            Arc::new(Simulation {
+                live_rooms: 0,
+                ..Default::default()
+            }),
+        )
+        .unwrap();
+        let init = reopened.request("init", json!({})).unwrap();
+        let anchor = &init["anchors"][0];
+        assert_eq!(
+            anchor["anchor_id"],
+            "100001",
+            "archive web_rid must repair {} metadata before any network request",
+            if missing { "missing" } else { "empty" }
+        );
+        assert_eq!(anchor["session_id"], "200001");
+        assert!(anchor["is_live"].is_null());
+        assert!(anchor["viewer_count"].is_null());
+        assert_ne!(anchor["duration_running"], true);
+        let sessions = reopened
+            .request("quality_sessions", json!({"anchor_id":anchor["anchor_id"]}))
+            .unwrap();
+        assert_eq!(sessions["total"], 1);
+        let timeline = reopened
+            .request(
+                "session_timeline",
+                json!({"anchor_id":anchor["anchor_id"],"session_id":sessions["sessions"][0]["session_id"]}),
+            )
+            .unwrap();
+        assert!(timeline["chat_count"].as_u64().unwrap() >= 2);
+        reopened.shutdown().unwrap();
+        drop(reopened);
+        let saved: Value = serde_json::from_slice(&std::fs::read(&config_path).unwrap()).unwrap();
+        assert_eq!(saved["anchor_metadata"]["1"]["anchor_id"], "100001");
+    }
+}
+
+#[test]
+fn metadata_flush_does_not_replace_saved_identity_with_a_temporary_blank() {
+    let (_dir, r) = setup();
+    r.request("add_anchors", json!({"values":"1"})).unwrap();
+    {
+        let mut state = r.shared.state.lock().unwrap();
+        let mut config = state.config.value.clone();
+        config["anchor_metadata"] = json!({"1":{"anchor_id":"100001","session_id":"200001"}});
+        state.config.replace(config).unwrap();
+        state.rooms.insert(
+            "1".into(),
+            crate::runtime::Room {
+                generation: 1,
+                value: json!({"name":"主播 1","anchor_id":"","session_id":""}),
+                route: None,
+                cancel: tokio_util::sync::CancellationToken::new(),
+            },
+        );
+    }
+    for (anchor, session) in [("", ""), ("100001", ""), ("", "200001")] {
+        {
+            let mut state = r.shared.state.lock().unwrap();
+            let room = state.rooms.get_mut("1").unwrap();
+            room.value["anchor_id"] = json!(anchor);
+            room.value["session_id"] = json!(session);
+        }
+        r.shared.flush_metadata().unwrap();
+        let state = r.shared.state.lock().unwrap();
+        assert_eq!(
+            state.config.value["anchor_metadata"]["1"]["anchor_id"],
+            "100001"
+        );
+        assert_eq!(
+            state.config.value["anchor_metadata"]["1"]["session_id"],
+            "200001"
+        );
+    }
+    r.shutdown().unwrap();
+}
+
+#[test]
+fn quick_stop_start_keeps_identity_before_metadata_flush_or_next_room_response() {
+    let dir = tempfile::tempdir().unwrap();
+    let transport = Arc::new(DeferredRoomSimulation {
+        simulation: Simulation {
+            live_rooms: 1,
+            ..Default::default()
+        },
+        defer_rooms: std::sync::atomic::AtomicBool::new(false),
+    });
+    let r = Runtime::open_with_transport(dir.path().into(), transport.clone()).unwrap();
+    r.request("add_anchors", json!({"values":"1"})).unwrap();
+    r.request("start", json!({"rids":["1"]})).unwrap();
+    until(&r, |p| p["anchors"][0]["state"] == "connected");
+    transport
+        .defer_rooms
+        .store(true, std::sync::atomic::Ordering::Release);
+    r.request("stop", json!({"rids":["1"]})).unwrap();
+    // Make the unflushed-config case explicit instead of depending on the timer.
+    {
+        let mut state = r.shared.state.lock().unwrap();
+        let mut config = state.config.value.clone();
+        config["anchor_metadata"] = json!({});
+        state.config.replace(config).unwrap();
+    }
+    r.request("start", json!({"rids":["1"]})).unwrap();
+    let poll = r.request("poll", json!({})).unwrap();
+    assert_eq!(poll["anchors"][0]["anchor_id"], "100001");
+    assert_eq!(poll["anchors"][0]["session_id"], "200001");
+    assert!(poll["anchors"][0]["is_live"].is_null());
+    assert!(poll["anchors"][0]["viewer_count"].is_null());
+    assert_ne!(poll["anchors"][0]["duration_running"], true);
+    r.request("stop", json!({"rids":["1"]})).unwrap();
+    r.shutdown().unwrap();
+    let saved: Value =
+        serde_json::from_slice(&std::fs::read(dir.path().join("config.json")).unwrap()).unwrap();
+    assert_eq!(saved["anchor_metadata"]["1"]["anchor_id"], "100001");
+    assert_eq!(saved["anchor_metadata"]["1"]["session_id"], "200001");
+}
+
+#[test]
+fn restarting_disambiguates_archive_sessions_only_with_a_known_anchor_and_keeps_custom_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 0,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    first.request("add_anchors", json!({"values":"1"})).unwrap();
+    first
+        .request("rename", json!({"rid":"1","name":"我的自定义主播名"}))
+        .unwrap();
+    for (anchor, session, timestamp) in [
+        ("100001", "200001", "2026-10-22T14:00:00+08:00"),
+        ("100002", "200002", "2026-10-23T14:00:00+08:00"),
+    ] {
+        let record = serde_json::from_value(json!({
+            "anchor_id":anchor,"anchor_name":format!("归档主播 {anchor}"),"web_rid":"1",
+            "session_id":session,"sender_id":"9001","sender_name":"合成观众",
+            "message_type":"chat","content":"合成历史消息","message_id":session,
+            "message_time":timestamp,"received_at":timestamp,"time_source":"server","payload":{}
+        }))
+        .unwrap();
+        first
+            .shared
+            .archive
+            .record_message(record, "合成场次".into(), Some(timestamp.into()))
+            .unwrap();
+    }
+    first.shutdown().unwrap();
+    drop(first);
+
+    for known_anchor in ["", "100001", "100002"] {
+        let config_path = dir.path().join("config.json");
+        let mut config: Value =
+            serde_json::from_slice(&std::fs::read(&config_path).unwrap()).unwrap();
+        config["anchor_metadata"] = if known_anchor.is_empty() {
+            json!({})
+        } else {
+            json!({"1":{"anchor_id":known_anchor,"session_id":""}})
+        };
+        std::fs::write(&config_path, serde_json::to_vec(&config).unwrap()).unwrap();
+        let reopened = Runtime::open_with_transport(
+            dir.path().into(),
+            Arc::new(Simulation {
+                live_rooms: 0,
+                ..Default::default()
+            }),
+        )
+        .unwrap();
+        let init = reopened.request("init", json!({})).unwrap();
+        let room = &init["anchors"][0];
+        assert_eq!(room["name"], "我的自定义主播名");
+        assert_eq!(room["anchor_id"], known_anchor);
+        assert_eq!(
+            room["session_id"],
+            match known_anchor {
+                "100001" => "200001",
+                "100002" => "200002",
+                _ => "",
+            }
+        );
+        assert!(room["is_live"].is_null());
+        assert!(room["viewer_count"].is_null());
+        assert_eq!(init["archive_anchors"].as_array().unwrap().len(), 2);
+        reopened.shutdown().unwrap();
+    }
+}
+
+#[test]
+fn restarting_recovers_a_known_anchor_across_aliases_without_matching_unknown_rooms_by_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 0,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    first
+        .request("add_anchors", json!({"values":"1\n3"}))
+        .unwrap();
+    first
+        .request("rename", json!({"rid":"3","name":"同名主播"}))
+        .unwrap();
+    {
+        let mut state = first.shared.state.lock().unwrap();
+        let mut config = state.config.value.clone();
+        config["anchor_metadata"] = json!({"1":{"anchor_id":"100001","session_id":""}});
+        state.config.replace(config).unwrap();
+    }
+    let timestamp = "2026-10-23T14:00:00+08:00";
+    let record = serde_json::from_value(json!({
+        "anchor_id":"100001","anchor_name":"同名主播","web_rid":"2",
+        "session_id":"200001","sender_id":"9001","sender_name":"合成观众",
+        "message_type":"chat","content":"合成历史消息","message_id":"200001",
+        "message_time":timestamp,"received_at":timestamp,"time_source":"server","payload":{}
+    }))
+    .unwrap();
+    first
+        .shared
+        .archive
+        .record_message(record, "合成场次".into(), Some(timestamp.into()))
+        .unwrap();
+    first.shutdown().unwrap();
+    drop(first);
+
+    let reopened = Runtime::open_with_transport(
+        dir.path().into(),
+        Arc::new(Simulation {
+            live_rooms: 0,
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    let init = reopened.request("init", json!({})).unwrap();
+    assert_eq!(init["archive_anchors"][0]["web_rid"], "2");
+    let rooms = init["anchors"].as_array().unwrap();
+    let known = rooms.iter().find(|room| room["rid"] == "1").unwrap();
+    assert_eq!(known["anchor_id"], "100001");
+    assert_eq!(known["session_id"], "200001");
+    assert!(known["is_live"].is_null());
+    let unknown = rooms.iter().find(|room| room["rid"] == "3").unwrap();
+    assert_eq!(unknown["name"], "同名主播");
+    assert_eq!(unknown["anchor_id"], "");
+    assert_eq!(unknown["session_id"], "");
+    reopened.shutdown().unwrap();
+}
+#[test]
 fn production_pipeline_records_chat_ignores_decoded_gift_and_stops() {
     let (_d, r) = setup();
     r.request("add_anchors", json!({"values":"1\n2"})).unwrap();
@@ -281,6 +686,41 @@ fn update_confirmation_stops_and_cancel_recovers_saved_tasks() {
         true
     );
     until(&r, |p| p["anchors"][0]["state"] == "connected");
+    assert!(!d.path().join("update-resume.json").exists());
+    r.shutdown().unwrap();
+}
+#[test]
+fn native_launch_starts_configured_rooms_and_respects_persisted_opt_out() {
+    let (d, r) = setup();
+    r.request("add_anchors", json!({"values":"1\n2"})).unwrap();
+    assert_eq!(r.request("startup_settings", json!({})).unwrap()["startup_monitoring"], true);
+    r.request("start_on_launch", json!({})).unwrap();
+    until(&r, |p| p["anchors"].as_array().unwrap().iter().all(|a| a["state"] == "connected"));
+    assert_eq!(r.running_tasks().len(), 2);
+    r.request("start_on_launch", json!({})).unwrap();
+    assert_eq!(r.running_tasks().len(), 2);
+    r.request("configure_startup", json!({"startup_monitoring":false})).unwrap();
+    assert!(r.request("configure_startup", json!({"startup_monitoring":"yes"})).is_err());
+    r.shutdown().unwrap(); drop(r);
+    let r = Runtime::open_with_transport(d.path().into(), Arc::new(Simulation::default())).unwrap();
+    assert_eq!(r.request("startup_settings", json!({})).unwrap()["startup_monitoring"], false);
+    r.request("start_on_launch", json!({})).unwrap();
+    assert!(r.running_tasks().is_empty());
+    r.shutdown().unwrap();
+}
+#[test]
+fn update_restart_restores_monitoring_even_if_normal_launch_monitoring_is_disabled() {
+    let (d, r) = setup();
+    r.request("add_anchors", json!({"values":"1"})).unwrap();
+    r.request("configure_startup", json!({"startup_monitoring":false})).unwrap();
+    r.request("start", json!({"rids":["1"]})).unwrap();
+    until(&r, |p| p["anchors"][0]["state"] == "connected");
+    r.request("prepare_update", json!({"target_version":env!("CARGO_PKG_VERSION")})).unwrap();
+    r.shutdown().unwrap(); drop(r);
+    let r = Runtime::open_with_transport(d.path().into(), Arc::new(Simulation {live_rooms:2,..Default::default()})).unwrap();
+    r.request("start_on_launch", json!({})).unwrap();
+    until(&r, |p| p["anchors"][0]["state"] == "connected");
+    assert_eq!(r.running_tasks(), vec!["1".to_string()]);
     assert!(!d.path().join("update-resume.json").exists());
     r.shutdown().unwrap();
 }

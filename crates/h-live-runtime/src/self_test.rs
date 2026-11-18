@@ -67,11 +67,31 @@ pub fn run() -> Result<Value, String> {
     if recent["messages"].as_array().map(|a| a.len()) != Some(1) {
         return Err("消息查询自检失败".into());
     }
+    runtime.flush_for_backup()?;
+    let backup_path = directory.path().join("self-test.qingkan-backup.zip");
+    crate::data_backup::DataBackup::export(directory.path(), &backup_path,
+        json!({"livescope.appearance.font":"douyin"}))?;
+    let prepared = crate::data_backup::DataBackup::prepare(&backup_path, directory.path())?;
+    if prepared.summary()["counts"]["messages"] != 1 {
+        return Err("备份数据计数自检失败".into());
+    }
     let stopped = runtime.shutdown()?;
     if stopped["closed"] != true {
         return Err("原生后台退出自检失败".into());
     }
+    drop(runtime);
+    let imported = tempfile::tempdir().map_err(|_| "无法创建独立恢复目录")?;
+    let restored = prepared.restore(imported.path())?;
+    if restored["preferences"]["livescope.appearance.font"] != "douyin" {
+        return Err("备份设置恢复自检失败".into());
+    }
+    let reopened = Runtime::open(imported.path().into())?;
+    if reopened.request("recent_messages", json!({"type":"chat"}))?["messages"]
+        .as_array().map(|a| a.len()) != Some(1) {
+        return Err("备份消息恢复自检失败".into());
+    }
+    reopened.shutdown()?;
     Ok(
-        json!({"runtime_version":crate::VERSION,"native_version":crate::VERSION,"processing":"rust","in_process":true,"no_python_node_v8_sidecar":true,"initial_empty":true,"login_api_removed":true,"archive_write_read":true,"csv_xlsx_exports":true,"all_workers_stopped":true,"closed":true}),
+        json!({"runtime_version":crate::VERSION,"native_version":crate::VERSION,"processing":"rust","in_process":true,"no_python_node_v8_sidecar":true,"initial_empty":true,"login_api_removed":true,"archive_write_read":true,"csv_xlsx_exports":true,"backup_export_import":true,"all_workers_stopped":true,"closed":true}),
     )
 }

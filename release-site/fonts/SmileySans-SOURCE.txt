@@ -1,0 +1,27 @@
+Smiley Sans Oblique / 得意黑 — official complete web font
+
+Upstream: https://github.com/atelier-anchor/smiley-sans
+Release: v2.0.1
+Archive: https://github.com/atelier-anchor/smiley-sans/releases/download/v2.0.1/smiley-sans-v2.0.1.zip
+Original archive member: SmileySans-Oblique.ttf.woff2
+Local filename: SmileySans-Oblique.woff2
+The complete upstream font is unchanged; only its filename is shortened.
+Font bytes: 1150924
+Font SHA-256: 731f22973349404b15a88a99ef3b5dd4104c0965c23b7e485c1f11e84fea99e2
+Archive SHA-256: 299c0be6c960ae37361762eca76f7d0cd516615435bb96c0d4b98a1e70178a07
+
+License: SIL Open Font License 1.1, with the original copyright and
+Reserved Font Names retained in SmileySans-OFL.txt.
+License source: https://raw.githubusercontent.com/atelier-anchor/smiley-sans/v2.0.1/LICENSE
+License SHA-256: 9401f4050f1b66c26b6ccdc8b0e14a3c1cc37aac122eda84386f25854a9bec72
+
+The matching official TTF contains 9497 glyphs and 9440 Unicode codepoints.
+Acquisition verification on 2026-10-26 checked its cmap against all 200
+distinct Chinese characters in the website template and interaction script:
+no missing Chinese characters. The WOFF2 header and declared byte length
+were also checked. The full font avoids Chinese subset requests and allows
+future headings without rebuilding a page-specific font subset.
+
+The user-supplied CSS points to the same Version 2.0.1 font using 59 subsets:
+https://cn-font.claude-code-best.win/packages/dyh/dist/SmileySans-Oblique/result.css
+The website instead serves the original complete file locally.

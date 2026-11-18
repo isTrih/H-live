@@ -5,18 +5,18 @@ use crate::{
     proxy::{Pool, ProxyRecord},
     storage::{self, Result, Settings},
 };
-use futures_util::{stream, StreamExt};
+use futures_util::{StreamExt, stream};
 use qingkan_core::{
     archive::{ArchiveOptions, ArchiveStore},
     export::CancelToken,
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, VecDeque},
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
     },
     time::Duration,
 };
@@ -39,10 +39,12 @@ pub(crate) struct State {
     pub rooms: BTreeMap<String, Room>,
     pub events: VecDeque<Value>,
     pub seq: u64,
+    pub evicted_seq: u64,
     pub rates: VecDeque<u64>,
     pub pool: Pool,
     pub jobs: BTreeMap<String, Job>,
     pub deletions: BTreeMap<String, Job>,
+    pub highlights: BTreeMap<String, Job>,
     pub deleting: bool,
     pub subscriptions: BTreeMap<String, Value>,
     pub subscription_tokens: BTreeMap<String, CancellationToken>,
@@ -140,6 +142,14 @@ impl Shared {
         row.value["live_checked_at"] = json!(storage::now());
         row.value["broadcast_started_at"] = json!(info.started_at);
         row.value["viewer_count"] = json!(info.viewer_count);
+        row.value["anchor_identity_confirmed"] = json!(storage::id(&info.anchor_id));
+        // A confirmed real anchor is useful even while its room is offline.
+        // A room reassignment must never retain another anchor's last session.
+        if storage::id(&info.anchor_id) && row.value["anchor_id"] != info.anchor_id {
+            row.value["anchor_id"] = json!(info.anchor_id);
+            row.value["session_id"] = json!("");
+            row.value["activities"] = Value::Null;
+        }
         if info.is_live {
             if row.value["session_id"] != info.room_id || row.value["anchor_id"] != info.anchor_id {
                 row.value["activities"] = Value::Null;
@@ -154,12 +164,15 @@ impl Shared {
         s.seq += 1;
         event["seq"] = json!(s.seq);
         if s.events.len() == 2000 {
-            s.events.pop_front();
+            if let Some(evicted) = s.events.pop_front() {
+                s.evicted_seq = evicted["seq"].as_u64().unwrap_or(s.evicted_seq);
+            }
         }
         s.events.push_back(event);
     }
     pub fn status(&self, rid: &str, generation: u64, state: &str, detail: &str) {
         let mut s = self.state.lock().unwrap();
+        let debug = s.config.value["debug_logging"] == true;
         let Some(row) = s.rooms.get_mut(rid).filter(|r| r.generation == generation) else {
             return;
         };
@@ -170,12 +183,25 @@ impl Shared {
         row.value["detail"] = json!(detail);
         let name = row.value["name"].clone();
         let event = json!({"kind":"status","rid":rid,"name":name,"state":state,"detail":detail,"timestamp":storage::now()});
+        if !debug && routine_log(&event) {
+            return;
+        }
         Self::event_locked(&mut s, event.clone());
         drop(s);
         self.write_log(&event);
     }
     pub fn log(&self, rid: &str, detail: &str) {
+        let mut s = self.state.lock().unwrap();
+        if s.config.value["debug_logging"] != true {
+            return;
+        }
         let event = json!({"kind":"log","rid":rid,"detail":detail,"timestamp":storage::now()});
+        Self::event_locked(&mut s, event.clone());
+        drop(s);
+        self.write_log(&event);
+    }
+    pub fn warning(&self, rid: &str, detail: &str) {
+        let event = json!({"kind":"log","level":"warning","rid":rid,"detail":detail,"timestamp":storage::now()});
         Self::event_locked(&mut self.state.lock().unwrap(), event.clone());
         self.write_log(&event);
     }
@@ -226,8 +252,23 @@ impl Shared {
             if !v["anchor_metadata"].is_object() {
                 v["anchor_metadata"] = json!({})
             }
-            v["anchor_metadata"][rid] =
-                json!({"anchor_id":row.value["anchor_id"],"session_id":row.value["session_id"]});
+            if let Some(anchor) = row.value["anchor_id"].as_str().filter(|id| storage::id(id)) {
+                if row.value["anchor_identity_confirmed"]==true {
+                    crate::anchor_tags::confirm(&mut v,rid,anchor);
+                }
+                let session = row.value["session_id"]
+                    .as_str()
+                    .filter(|id| storage::id(id))
+                    .or_else(|| {
+                        (v["anchor_metadata"][rid]["anchor_id"] == anchor)
+                            .then(|| v["anchor_metadata"][rid]["session_id"].as_str())
+                            .flatten()
+                            .filter(|id| storage::id(id))
+                    })
+                    .unwrap_or("")
+                    .to_owned();
+                v["anchor_metadata"][rid] = json!({"anchor_id":anchor,"session_id":session});
+            }
         }
         if v != s.config.value {
             s.config.replace(v)?
@@ -263,6 +304,131 @@ impl Shared {
         value
     }
 }
+/// Message events always remain available; only diagnostic lifecycle noise is optional.
+pub(crate) fn routine_log(event: &Value) -> bool {
+    match event["kind"].as_str() {
+        Some("status") => !matches!(
+            event["state"].as_str(),
+            Some("error" | "retrying" | "suspected_offline")
+        ),
+        Some("log") => event["level"] != "warning" && event["level"] != "error",
+        _ => false,
+    }
+}
+
+const RUNTIME_LOG_LIMIT: u64 = 8 * 1024 * 1024;
+
+fn append_runtime_log(directory: &std::path::Path, line: &str) -> std::io::Result<()> {
+    use std::io::Write;
+    // Logs contain controlled diagnostic text, never message payloads or settings.
+    if line.len() > 16 * 1024 {
+        return Ok(());
+    }
+    std::fs::create_dir_all(directory)?;
+    let path = directory.join("runtime.jsonl");
+    if std::fs::metadata(&path).is_ok_and(|m| m.len() + line.len() as u64 + 1 > RUNTIME_LOG_LIMIT) {
+        let previous = directory.join("runtime.previous.jsonl");
+        match std::fs::remove_file(&previous) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
+        // If rotation fails, skip this append rather than growing the file without limit.
+        std::fs::rename(&path, previous)?;
+    }
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    writeln!(file, "{line}")
+}
+
+/// Keep the last known identity across collector restarts without carrying live state.
+fn remembered_identity(state: &State, rid: &str) -> (String, String) {
+    let saved = &state.config.value["anchor_metadata"][rid];
+    let current = state.rooms.get(rid).map(|room| &room.value);
+    let anchor = current
+        .and_then(|row| row["anchor_id"].as_str())
+        .filter(|id| storage::id(id))
+        .or_else(|| saved["anchor_id"].as_str().filter(|id| storage::id(id)))
+        .unwrap_or("");
+    let session = current
+        .filter(|row| row["anchor_id"] == anchor)
+        .and_then(|row| row["session_id"].as_str())
+        .filter(|id| storage::id(id))
+        .or_else(|| {
+            (saved["anchor_id"] == anchor)
+                .then(|| saved["session_id"].as_str())
+                .flatten()
+                .filter(|id| storage::id(id))
+        })
+        .unwrap_or("");
+    (anchor.to_owned(), session.to_owned())
+}
+
+/// Older versions could overwrite these IDs with blanks while monitoring offline.
+/// Repair only exact entrance matches; never infer identity from a display name.
+fn restore_archive_metadata(config: &mut Settings, archive: &ArchiveStore) -> Result<()> {
+    let needs_repair = config.value["anchors"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .any(|(rid, _)| {
+            let saved = &config.value["anchor_metadata"][rid];
+            !saved["anchor_id"].as_str().is_some_and(storage::id)
+                || !saved["session_id"].as_str().is_some_and(storage::id)
+        });
+    if !needs_repair {
+        return Ok(());
+    }
+    let history = archive
+        .monitor_history()
+        .map_err(|_| "读取历史主播对应关系失败，原数据已保留")?;
+    let mut entrances: BTreeMap<&str, Vec<_>> = BTreeMap::new();
+    for row in &history {
+        entrances.entry(&row.web_rid).or_default().push(row);
+    }
+    let mut candidate = config.value.clone();
+    for (rid, name) in config.value["anchors"].as_object().into_iter().flatten() {
+        let saved = &config.value["anchor_metadata"][rid];
+        let anchor = saved["anchor_id"].as_str().filter(|id| storage::id(id));
+        let session = saved["session_id"].as_str().filter(|id| storage::id(id));
+        if anchor.is_some() && session.is_some() {
+            continue;
+        }
+        let recovered = if let Some(anchor) = anchor {
+            history.iter().find(|row| row.anchor_id == anchor)
+        } else {
+            entrances
+                .get(rid.as_str())
+                .filter(|matches| matches.len() == 1)
+                .and_then(|matches| matches.first().copied())
+        };
+        let Some(recovered) = recovered else {
+            continue;
+        };
+        if !candidate["anchor_metadata"].is_object() {
+            candidate["anchor_metadata"] = json!({});
+        }
+        candidate["anchor_metadata"][rid] = json!({
+            "anchor_id": recovered.anchor_id,
+            "session_id": if anchor.is_some() { session.unwrap_or(&recovered.session_id) } else { &recovered.session_id }
+        });
+        if name
+            .as_str()
+            .is_some_and(|name| name == rid || name == format!("主播 {rid}"))
+            && !recovered.anchor_name.trim().is_empty()
+            && recovered.anchor_name.chars().count() <= 200
+        {
+            candidate["anchors"][rid] = json!(recovered.anchor_name);
+        }
+    }
+    if candidate != config.value {
+        config.replace(candidate)?;
+    }
+    Ok(())
+}
+
 pub(crate) fn records(config: &Value) -> Result<Vec<ProxyRecord>> {
     let mut records = BTreeMap::new();
     for subscription in config["proxy_subscriptions"]
@@ -295,26 +461,30 @@ pub(crate) fn proxy_snapshot(s: &State) -> Value {
     p
 }
 pub(crate) fn subscription_snapshot(s: &State) -> Value {
-    json!(s.config.value["proxy_subscriptions"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .map(|v| {
-            let mut p = s
-                .subscriptions
-                .get(v["id"].as_str().unwrap_or(""))
-                .cloned()
-                .unwrap_or(json!({"state":"idle","error":""}));
-            for k in ["id", "interval_minutes", "enabled", "updated_at"] {
-                p[k] = v[k].clone()
-            }
-            p["count"] = json!(v["records"].as_array().map(|a| a.len()).unwrap_or(0));
-            p["label"] = json!(url::Url::parse(v["url"].as_str().unwrap_or(""))
-                .map(|u| format!("{}{}", u.host_str().unwrap_or(""), u.path()))
-                .unwrap_or_default());
-            p
-        })
-        .collect::<Vec<_>>())
+    json!(
+        s.config.value["proxy_subscriptions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|v| {
+                let mut p = s
+                    .subscriptions
+                    .get(v["id"].as_str().unwrap_or(""))
+                    .cloned()
+                    .unwrap_or(json!({"state":"idle","error":""}));
+                for k in ["id", "interval_minutes", "enabled", "updated_at"] {
+                    p[k] = v[k].clone()
+                }
+                p["count"] = json!(v["records"].as_array().map(|a| a.len()).unwrap_or(0));
+                p["label"] = json!(
+                    url::Url::parse(v["url"].as_str().unwrap_or(""))
+                        .map(|u| format!("{}{}", u.host_str().unwrap_or(""), u.path()))
+                        .unwrap_or_default()
+                );
+                p
+            })
+            .collect::<Vec<_>>()
+    )
 }
 struct RoomTask {
     cancel: CancellationToken,
@@ -323,6 +493,8 @@ struct RoomTask {
 pub struct Runtime {
     pub(crate) rt: tokio::runtime::Runtime,
     pub(crate) shared: Arc<Shared>,
+    pub(crate) clips: Arc<crate::clips::ClipService>,
+    pub(crate) session_marks: crate::session_marks::MarkStore,
     tasks: tokio::sync::Mutex<BTreeMap<String, RoomTask>>,
     pub(crate) action: Mutex<()>,
     generation: AtomicU64,
@@ -351,10 +523,11 @@ impl Runtime {
         network: Arc<dyn crate::transport::Transport>,
         secrets: Arc<dyn storage::SecretProtector>,
     ) -> Result<Self> {
-        let config = Settings::load_with_protector(directory.clone(), secrets)?;
+        let mut config = Settings::load_with_protector(directory.clone(), secrets)?;
         records(&config.value)?;
         let archive = ArchiveStore::open(&directory, ArchiveOptions::default())
             .map_err(|_| "消息库打开或升级失败，原数据已保留")?;
+        restore_archive_metadata(&mut config, &archive)?;
         let threads = Arc::new(AtomicUsize::new(0));
         let starts = threads.clone();
         let stops = threads.clone();
@@ -387,20 +560,8 @@ impl Runtime {
         let log_worker = std::thread::Builder::new()
             .name("h-live-log".into())
             .spawn(move || {
-                use std::io::Write;
-                let _ = std::fs::create_dir_all(&log_dir);
-                let path = log_dir.join("runtime.jsonl");
                 for line in receiver {
-                    if std::fs::metadata(&path).is_ok_and(|m| m.len() > 8 * 1024 * 1024) {
-                        let _ = std::fs::rename(&path, log_dir.join("runtime.previous.jsonl"));
-                    }
-                    if let Ok(mut file) = std::fs::OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open(&path)
-                    {
-                        let _ = writeln!(file, "{line}");
-                    }
+                    let _ = append_runtime_log(&log_dir, &line);
                 }
             })
             .map_err(|_| "无法启动日志任务")?;
@@ -413,10 +574,12 @@ impl Runtime {
                 rooms: BTreeMap::new(),
                 events: VecDeque::new(),
                 seq: 0,
+                evicted_seq: 0,
                 rates: VecDeque::new(),
                 pool,
                 jobs: BTreeMap::new(),
                 deletions: BTreeMap::new(),
+                highlights: BTreeMap::new(),
                 deleting: false,
                 subscriptions: BTreeMap::new(),
                 subscription_tokens: BTreeMap::new(),
@@ -433,9 +596,13 @@ impl Runtime {
             proxy_busy: AtomicBool::new(false),
             logs: Mutex::new(Some(logs)),
         });
+        let clips = crate::clips::ClipService::open(shared.clone());
+        let session_marks = crate::session_marks::MarkStore::new(shared.directory.clone());
         let instance = Self {
             rt,
             shared,
+            clips: clips.clone(),
+            session_marks,
             tasks: tokio::sync::Mutex::new(BTreeMap::new()),
             action: Mutex::new(()),
             generation: AtomicU64::new(0),
@@ -446,6 +613,7 @@ impl Runtime {
             log_worker: Mutex::new(Some(log_worker)),
         };
         instance.background();
+        instance.spawn(clips.worker());
         instance.resume_update()?;
         Ok(instance)
     }
@@ -490,7 +658,7 @@ impl Runtime {
                         let _ = tokio::task::spawn_blocking(move || {
                             let result = clone.flush_metadata();
                             if clone.polling.flush().is_err() {
-                                clone.log("", "开播偏好缓存保存失败，下次继续重试");
+                                clone.warning("", "开播偏好缓存保存失败，下次继续重试");
                             }
                             result
                         })
@@ -507,7 +675,7 @@ impl Runtime {
     }
     pub(crate) fn anchors(&self) -> Value {
         let s = self.shared.state.lock().unwrap();
-        json!(s.config.value["anchors"].as_object().unwrap().iter().map(|(rid,name)|{let mut row=s.rooms.get(rid).map(|r|r.value.clone()).unwrap_or_else(||json!({"rid":rid,"name":name,"state":"stopped","detail":"尚未开始","active":false,"is_live":null,"anchor_id":s.config.value["anchor_metadata"][rid]["anchor_id"].as_str().unwrap_or(""),"session_id":s.config.value["anchor_metadata"][rid]["session_id"].as_str().unwrap_or(""),"message_count":0,"duration_running":false,"viewer_count":null,"route_kind":"direct"}));row["name"]=name.clone();let unsupported=s.config.value["pc_unsupported_rids"].as_array().is_some_and(|a|a.iter().any(|v|v.as_str()==Some(rid)));row["pc_unsupported"]=json!(unsupported);row["pc_support_source"]=json!(if unsupported{"manual"}else{""});row}).collect::<Vec<_>>())
+        json!(s.config.value["anchors"].as_object().unwrap().iter().map(|(rid,name)|{let mut row=s.rooms.get(rid).map(|r|r.value.clone()).unwrap_or_else(||json!({"rid":rid,"name":name,"state":"stopped","detail":"尚未开始","active":false,"is_live":null,"anchor_id":s.config.value["anchor_metadata"][rid]["anchor_id"].as_str().unwrap_or(""),"session_id":s.config.value["anchor_metadata"][rid]["session_id"].as_str().unwrap_or(""),"message_count":0,"duration_running":false,"viewer_count":null,"route_kind":"direct"}));row["name"]=name.clone();row["tags"]=json!(crate::anchor_tags::tags(&s.config.value,rid,row["anchor_id"].as_str().unwrap_or("")));let unsupported=s.config.value["pc_unsupported_rids"].as_array().is_some_and(|a|a.iter().any(|v|v.as_str()==Some(rid)));row["pc_unsupported"]=json!(unsupported);row["pc_support_source"]=json!(if unsupported{"manual"}else{""});row}).collect::<Vec<_>>())
     }
     pub(crate) fn start(&self, rids: Vec<String>) -> Result<Value> {
         if self.shared.state.lock().unwrap().deleting {
@@ -529,7 +697,8 @@ impl Runtime {
                     let Some(name) = s.config.value["anchors"].get(rid) else {
                         return Err("直播间不在列表中".into());
                     };
-                    json!({"rid":rid,"name":name,"active":true,"state":"starting","detail":"正在排队启动","anchor_id":"","session_id":"","is_live":null,"message_count":0,"viewer_count":null,"duration_seconds":null,"duration_running":false})
+                    let (anchor_id,session_id)=remembered_identity(&s,rid);
+                    json!({"rid":rid,"name":name,"active":true,"state":"starting","detail":"正在排队启动","anchor_id":anchor_id,"session_id":session_id,"is_live":null,"message_count":0,"viewer_count":null,"duration_seconds":null,"duration_running":false})
                 };
                 self.shared.state.lock().unwrap().rooms.insert(rid.clone(), Room {
                     generation, value, route: None, cancel: cancel.clone(),
@@ -579,8 +748,12 @@ impl Runtime {
         })
     }
     pub fn update_readiness(&self) -> Value {
+        if self.clips.busy() { return json!({"ready":false,"reason":"exporting"}); }
         let s = self.shared.state.lock().unwrap();
         if s.deleting
+            || s.highlights
+                .values()
+                .any(|j| j.value["status"] == "running")
             || s.refresh["active"] == true
             || s.subscriptions.values().any(|v| v["state"] == "refreshing")
         {
@@ -616,9 +789,15 @@ impl Runtime {
             .collect()
     }
     pub(crate) fn prepare_update(&self, p: &Value) -> Result<Value> {
+        if self.clips.busy() { return Ok(json!({"ready":false,"reason":"exporting"})); }
         {
             let s = self.shared.state.lock().unwrap();
-            if s.deleting || s.jobs.values().any(|j| j.value["status"] == "running") {
+            if s.deleting
+                || s.highlights
+                    .values()
+                    .any(|j| j.value["status"] == "running")
+                || s.jobs.values().any(|j| j.value["status"] == "running")
+            {
                 return Ok(json!({"ready":false,"reason":"exporting"}));
             }
         }
@@ -652,7 +831,7 @@ impl Runtime {
         self.shared.flush_metadata()?;
         if self.shared.polling.flush().is_err() {
             self.shared
-                .log("", "开播偏好缓存保存失败，消息归档不受影响");
+                .warning("", "开播偏好缓存保存失败，消息归档不受影响");
         }
         Ok(json!({"ready":true,"reason":"ready","resume_count":rids.len()}))
     }
@@ -693,6 +872,7 @@ impl Runtime {
             return Ok(json!({"closed":true,"all_workers_stopped":true}));
         }
         self.shared.cancel.cancel();
+        self.clips.cancel_all();
         self.shared.quality_cancel.cancel();
         let ids = self
             .rt
@@ -700,7 +880,12 @@ impl Runtime {
         self.stop(&ids)?;
         {
             let s = self.shared.state.lock().unwrap();
-            for j in s.jobs.values().chain(s.deletions.values()) {
+            for j in s
+                .jobs
+                .values()
+                .chain(s.deletions.values())
+                .chain(s.highlights.values())
+            {
                 j.cancel.cancel();
             }
         }
@@ -723,7 +908,7 @@ impl Runtime {
         self.shared.flush_metadata()?;
         if self.shared.polling.flush().is_err() {
             self.shared
-                .log("", "开播偏好缓存保存失败，消息归档不受影响");
+                .warning("", "开播偏好缓存保存失败，消息归档不受影响");
         }
         if !self.shared.archive.close(Duration::from_secs(15)) {
             return Err("归档尚未完成，未确认退出".into());
@@ -766,3 +951,7 @@ impl Drop for Runtime {
         let _ = self.shutdown();
     }
 }
+
+#[cfg(test)]
+#[path = "runtime_logging_tests.rs"]
+mod logging_tests;

@@ -22,10 +22,15 @@ pub const SCHEMA_VERSION: i64 = 3;
 mod activity_archive;
 #[path = "audience.rs"]
 mod audience;
+#[path = "monitor_history.rs"]
+mod monitor_history;
+pub use monitor_history::MonitorHistory;
 #[path = "quality.rs"]
 pub mod quality;
 #[path = "recent.rs"]
 mod recent;
+#[path = "timeline.rs"]
+mod timeline;
 #[derive(Debug, thiserror::Error)]
 pub enum ArchiveError {
     #[error("{0}")]

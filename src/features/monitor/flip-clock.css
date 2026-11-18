@@ -1,0 +1,121 @@
+/* Individual calendar leaves: stable digits, a centre hinge, and changing halves. */
+.flip-clock {
+  --clock-height: 18px;
+  --clock-top: #fafbf9;
+  --clock-bottom: #e9ece7;
+  --clock-border: #c9d0c5;
+  --clock-seam: #b3bcad;
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+  color: #3c493c;
+  white-space: nowrap;
+  font-family: var(--app-ui-font);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: var(--clock-height);
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+.flip-clock .clock-digit,
+.flip-clock .clock-colon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
+  height: var(--clock-height);
+}
+.flip-clock .clock-digit {
+  width: 10px;
+  overflow: visible;
+  isolation: isolate;
+  perspective: 90px;
+  border-radius: 3px;
+  background: linear-gradient(var(--clock-top) 50%, var(--clock-bottom) 50%);
+  box-shadow: inset 0 0 0 1px var(--clock-border), inset 0 1px 0 #ffffffc9;
+}
+.flip-clock .clock-digit::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--clock-seam);
+  opacity: .32;
+  pointer-events: none;
+}
+.flip-clock .clock-colon {
+  width: 3px;
+  color: #789382;
+  font-weight: 500;
+  translate: 0 -1px;
+}
+.flip-clock .clock-value,
+.flip-clock .clock-glyph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: var(--clock-height);
+  translate: 0 -1.5px;
+}
+:root[data-font=chill] .flip-clock :is(.clock-value,.clock-glyph) {
+  translate: 0 -1px;
+}
+.flip-clock .clock-face {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 50%;
+  overflow: hidden;
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+.flip-clock .clock-glyph {
+  position: absolute;
+  top: 0;
+}
+.flip-clock .clock-top {
+  top: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--clock-top);
+  transform-origin: 50% 100%;
+}
+.flip-clock .clock-bottom {
+  top: 50%;
+  border-radius: 0 0 3px 3px;
+  background: var(--clock-bottom);
+  transform-origin: 50% 0;
+}
+.flip-clock .clock-bottom .clock-glyph {
+  top: calc(var(--clock-height) / -2);
+}
+.flip-clock .clock-previous { z-index: 1; }
+.flip-clock .clock-out {
+  z-index: 3;
+  animation: clock-page-out 280ms cubic-bezier(.45,0,.8,.35) both;
+}
+.flip-clock .clock-in {
+  z-index: 2;
+  animation: clock-page-in 280ms cubic-bezier(.2,.65,.35,1) both;
+}
+@keyframes clock-page-out {
+  0% { transform: rotateX(0deg); }
+  50%,100% { transform: rotateX(-90deg); }
+}
+@keyframes clock-page-in {
+  0%,50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+.unsupported .flip-clock {
+  --clock-top: #fff1cb;
+  --clock-bottom: #f2dfa9;
+  --clock-border: #cbb678;
+  --clock-seam: #a18b4f;
+  color: #78612c;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-clock .clock-face { display: none; animation: none; }
+}
